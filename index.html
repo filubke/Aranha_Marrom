@@ -500,21 +500,31 @@ function rankCol(){return {label:'#',rank:true,sortable:false,val:function(){ret
 
 /* ---------- Overview tables ---------- */
 safe(function(){
+  var totalRodadas=DATA.dates.length;
+  function jogosDe(nm){var p=DATA.players[nm]; return p?p.jogos:0;}
   sortableTable('tbl-pontuacao',[rankCol(),
     {label:'Atleta',val:function(r){return r.atleta;}},
+    {label:'Jogos',num:true,val:function(r){return jogosDe(r.atleta);}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
     {label:'Assist',num:true,val:function(r){return r.assist;}},
-    {label:'Total',num:true,val:function(r){return r.total;}}],
-    DATA.rankings.pontuacaoGeral,{defaultCol:4,defaultDir:'desc'});
+    {label:'Gols/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.gols/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.gols/j:0).toFixed(2);}},
+    {label:'Assist/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.assist/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.assist/j:0).toFixed(2);}},
+    {label:'Total',num:true,val:function(r){return r.total;}},
+    {label:'Pontos/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.total/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.total/j:0).toFixed(2);}}],
+    DATA.rankings.pontuacaoGeral,{defaultCol:7,defaultDir:'desc'});
   sortableTable('tbl-zagueiros',[rankCol(),
     {label:'Atleta',val:function(r){return r.atleta;}},
+    {label:'Jogos',num:true,val:function(r){return jogosDe(r.atleta);}},
     {label:'Jogos s/ gols',num:true,val:function(r){return r.jogosSemGols;}},
+    {label:'% Sem Gols',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.jogosSemGols/j*100:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.jogosSemGols/j*100:0).toFixed(0)+'%';}},
     {label:'Total',num:true,val:function(r){return r.total;}}],
-    DATA.rankings.melhoresZagueiros,{defaultCol:2,defaultDir:'desc'});
+    DATA.rankings.melhoresZagueiros,{defaultCol:3,defaultDir:'desc'});
   sortableTable('tbl-vitoriosos',[rankCol(),
     {label:'Atleta',val:function(r){return r.atleta;}},
+    {label:'Jogos',num:true,val:function(r){return jogosDe(r.atleta);}},
     {label:'Vitórias',num:true,val:function(r){return r.vitorias;}},
     {label:'Empates',num:true,val:function(r){return r.empates;}},
+    {label:'Vitórias/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.vitorias/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.vitorias/j:0).toFixed(2);}},
     {label:'Total',num:true,val:function(r){return r.total;}}],
     DATA.rankings.maisVitoriosos,{defaultCol:2,defaultDir:'desc'});
   var order=['Azul','Branco','Preto','Goleiro'];
@@ -524,9 +534,11 @@ safe(function(){
     {label:'Time',val:function(r){return r.time;}},
     {label:'Vitórias',num:true,val:function(r){return r.vit;}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
-    {label:'Assistências',num:true,val:function(r){return r.assist;}}],
-    rows,{defaultCol:1,defaultDir:'desc',footer:['Total',tot.vit,tot.gols,tot.assist]});
-  var totalRodadas=DATA.dates.length;
+    {label:'Assistências',num:true,val:function(r){return r.assist;}},
+    {label:'Vit/Sábado',num:true,val:function(r){return totalRodadas?r.vit/totalRodadas:0;},render:function(r){return (totalRodadas?r.vit/totalRodadas:0).toFixed(2);}},
+    {label:'Gols/Sábado',num:true,val:function(r){return totalRodadas?r.gols/totalRodadas:0;},render:function(r){return (totalRodadas?r.gols/totalRodadas:0).toFixed(2);}},
+    {label:'Assist/Sábado',num:true,val:function(r){return totalRodadas?r.assist/totalRodadas:0;},render:function(r){return (totalRodadas?r.assist/totalRodadas:0).toFixed(2);}}],
+    rows,{defaultCol:1,defaultDir:'desc',footer:['Total',tot.vit,tot.gols,tot.assist,'','','']});
   sortableTable('tbl-goleiros',[
     {label:'Atleta',val:function(r){return r.atleta;}},
     {label:'Jogos',num:true,val:function(r){return r.jogos;}},
