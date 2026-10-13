@@ -529,7 +529,7 @@ safe(function(){
     {label:'Empates',num:true,val:function(r){return r.empates;}},
     {label:'Vitórias/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.vitorias/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.vitorias/j:0).toFixed(2);}},
     {label:'Total',num:true,val:function(r){return r.total;}}],
-    DATA.rankings.maisVitoriosos,{defaultCol:2,defaultDir:'desc'});
+    DATA.rankings.maisVitoriosos,{defaultCol:3,defaultDir:'desc'});
   var order=['Azul','Branco','Preto','Goleiro'];
   var rows=order.filter(function(t){return DATA.teams[t];}).map(function(t){var d=DATA.teams[t];return {time:t,vit:d.vit,gols:d.gols,assist:d.assist};});
   var tot=rows.reduce(function(a,r){a.vit+=r.vit;a.gols+=r.gols;a.assist+=r.assist;return a;},{vit:0,gols:0,assist:0});
