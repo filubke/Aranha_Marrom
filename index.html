@@ -310,7 +310,7 @@ function strOf(row, idx){ var c=cellOf(row,idx); return (c && c.v!=null) ? Strin
    7 Vitorias | 8 Empates | 11 Zagueiro/Jogo sem gols (presence)
    14 Total | 15 marker (ZC / Goleiro / Faltou) */
 function buildDataFromRows(rawRows){
-  var players = {}, teams = {}, byDayTotalsMap = {};
+  var players = {}, teams = {}, byDayTotalsMap = {}, goleirosMap = {};
   rawRows.forEach(function(r){
     if(!players[r.atleta]) players[r.atleta] = {gols:0,assist:0,vit:0,emp:0,total:0,jogos:0,
       zagueiroJogos:0, goleiroJogos:0, byTeam:{}, byDay:[]};
@@ -329,6 +329,12 @@ function buildDataFromRows(rawRows){
 
     if(!byDayTotalsMap[r.date]) byDayTotalsMap[r.date]={gols:0,assist:0};
     byDayTotalsMap[r.date].gols+=r.gols; byDayTotalsMap[r.date].assist+=r.assist;
+
+    if(r.marker==='Goleiro'){
+      if(!goleirosMap[r.atleta]) goleirosMap[r.atleta]={atleta:r.atleta,vit:0,emp:0,gols:0,assist:0,sofridos:0,total:0,jogos:0};
+      var gm=goleirosMap[r.atleta];
+      gm.vit+=r.vit; gm.emp+=r.emp; gm.gols+=r.gols; gm.assist+=r.assist; gm.sofridos+=(r.sofridos||0); gm.total+=r.total; gm.jogos+=1;
+    }
   });
 
   var dates = Object.keys(byDayTotalsMap).sort();
@@ -353,12 +359,13 @@ function buildDataFromRows(rawRows){
     return {atleta:n,vitorias:p.vit,empates:p.emp,total:p.total};}).sort(function(a,b){return b.vitorias-a.vitorias;});
 
   var byDayTotals = dates.map(function(d){return {date:d,gols:byDayTotalsMap[d].gols,assist:byDayTotalsMap[d].assist};});
+  var goleiros = Object.keys(goleirosMap).map(function(n){return goleirosMap[n];}).sort(function(a,b){return b.total-a.total;});
 
   return {
     lastUpdate: dates.length?dates[dates.length-1]:null,
     dates: dates, players: players, teams: teams,
     rankings:{pontuacaoGeral:pontuacaoGeral, melhoresZagueiros:melhoresZagueiros, maisVitoriosos:maisVitoriosos},
-    byDayTotals: byDayTotals
+    byDayTotals: byDayTotals, goleiros: goleiros
   };
 }
 
@@ -387,6 +394,7 @@ function loadSheetData(onOk, onErr){
           date: dateIso, time: strOf(row,3).trim(), atleta: atleta,
           gols: numOf(row,5), assist: numOf(row,6), vit: numOf(row,7), emp: numOf(row,8),
           zagPresent: !!(cellOf(row,11) && cellOf(row,11).v!=null),
+          sofridos: numOf(row,13),
           total: numOf(row,14), marker: strOf(row,15).trim()
         });
       });
@@ -737,6 +745,7 @@ safe(function(){
     '<div class="statpill">Atletas no elenco <b>'+rows.length+'</b></div>'+
     '<div class="statpill">Assiduidade média do elenco <b>'+pctAvg.toFixed(0)+'%</b></div>';
 
+  var rowsMin10 = rows.filter(function(r){return r.jogos>=10;});
   sortableTable('tbl-assiduidade',[
     {label:'Atleta',val:function(r){return r.atleta;}},
     {label:'Jogos',num:true,val:function(r){return r.jogos;}},
@@ -744,7 +753,7 @@ safe(function(){
     {label:'Gols/Jogo',num:true,val:function(r){return r.golsJogo;},render:function(r){return r.golsJogo.toFixed(2);}},
     {label:'Assist/Jogo',num:true,val:function(r){return r.assistJogo;},render:function(r){return r.assistJogo.toFixed(2);}},
     {label:'Pontuação/Jogo',num:true,val:function(r){return r.totalJogo;},render:function(r){return r.totalJogo.toFixed(2);}}],
-    rows,{defaultCol:2,defaultDir:'desc'});
+    rowsMin10,{defaultCol:2,defaultDir:'desc'});
 
   var top20 = rows.slice().sort(function(a,b){return b.pct-a.pct;}).slice(0,20);
   new Chart(document.getElementById('chartAssiduidade'),{type:'bar',
