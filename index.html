@@ -510,11 +510,13 @@ safe(function(){
     {label:'Jogos',num:true,val:function(r){return jogosDe(r.atleta);}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
     {label:'Assist',num:true,val:function(r){return r.assist;}},
+    {label:'Participação',num:true,val:function(r){return r.gols+r.assist;}},
     {label:'Gols/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.gols/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.gols/j:0).toFixed(2);}},
     {label:'Assist/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.assist/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.assist/j:0).toFixed(2);}},
+    {label:'Participação/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?(r.gols+r.assist)/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?(r.gols+r.assist)/j:0).toFixed(2);}},
     {label:'Total',num:true,val:function(r){return r.total;}},
     {label:'Pontos/Sábado',num:true,val:function(r){var j=jogosDe(r.atleta);return j?r.total/j:0;},render:function(r){var j=jogosDe(r.atleta);return (j?r.total/j:0).toFixed(2);}}],
-    DATA.rankings.pontuacaoGeral,{defaultCol:7,defaultDir:'desc'});
+    DATA.rankings.pontuacaoGeral,{defaultCol:9,defaultDir:'desc'});
   sortableTable('tbl-zagueiros',[rankCol(),
     {label:'Atleta',val:function(r){return r.atleta;}},
     {label:'Jogos',num:true,val:function(r){return jogosDe(r.atleta);}},
@@ -542,18 +544,21 @@ safe(function(){
     {label:'Gols/Sábado',num:true,val:function(r){return totalRodadas?r.gols/totalRodadas:0;},render:function(r){return (totalRodadas?r.gols/totalRodadas:0).toFixed(2);}},
     {label:'Assist/Sábado',num:true,val:function(r){return totalRodadas?r.assist/totalRodadas:0;},render:function(r){return (totalRodadas?r.assist/totalRodadas:0).toFixed(2);}}],
     rows,{defaultCol:1,defaultDir:'desc',footer:['Total',tot.vit,tot.gols,tot.assist,'','','']});
+  var GOLEIRO_MIN_JOGOS=5;
+  var goleiroRows=(DATA.goleiros||[]).filter(function(r){return r.jogos>=GOLEIRO_MIN_JOGOS;});
   sortableTable('tbl-goleiros',[
     {label:'Atleta',val:function(r){return r.atleta;}},
     {label:'Jogos',num:true,val:function(r){return r.jogos;}},
     {label:'Assiduidade',num:true,val:function(r){return totalRodadas?r.jogos/totalRodadas*100:0;},render:function(r){return (totalRodadas?r.jogos/totalRodadas*100:0).toFixed(0)+'%';}},
     {label:'Vitórias',num:true,val:function(r){return r.vit;}},
+    {label:'Vitórias/Jogo',num:true,val:function(r){return r.jogos?r.vit/r.jogos:0;},render:function(r){return (r.jogos?r.vit/r.jogos:0).toFixed(2);}},
     {label:'Empates',num:true,val:function(r){return r.emp;}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
     {label:'Assistências',num:true,val:function(r){return r.assist;}},
     {label:'Gols Sofridos',num:true,val:function(r){return r.sofridos;}},
     {label:'Sofridos/Jogo',num:true,val:function(r){return r.jogos?r.sofridos/r.jogos:0;},render:function(r){return (r.jogos?r.sofridos/r.jogos:0).toFixed(2);}},
     {label:'Pontuação',num:true,val:function(r){return r.total;}}],
-    (DATA.goleiros||[]),{defaultCol:9,defaultDir:'desc'});
+    goleiroRows,{defaultCol:10,defaultDir:'desc'});
 });
 
 /* ---------- Charts ---------- */
