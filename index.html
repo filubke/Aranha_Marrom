@@ -526,15 +526,19 @@ safe(function(){
     {label:'Gols',num:true,val:function(r){return r.gols;}},
     {label:'Assistências',num:true,val:function(r){return r.assist;}}],
     rows,{defaultCol:1,defaultDir:'desc',footer:['Total',tot.vit,tot.gols,tot.assist]});
+  var totalRodadas=DATA.dates.length;
   sortableTable('tbl-goleiros',[
     {label:'Atleta',val:function(r){return r.atleta;}},
+    {label:'Jogos',num:true,val:function(r){return r.jogos;}},
+    {label:'Assiduidade',num:true,val:function(r){return totalRodadas?r.jogos/totalRodadas*100:0;},render:function(r){return (totalRodadas?r.jogos/totalRodadas*100:0).toFixed(0)+'%';}},
     {label:'Vitórias',num:true,val:function(r){return r.vit;}},
     {label:'Empates',num:true,val:function(r){return r.emp;}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
     {label:'Assistências',num:true,val:function(r){return r.assist;}},
     {label:'Gols Sofridos',num:true,val:function(r){return r.sofridos;}},
+    {label:'Sofridos/Jogo',num:true,val:function(r){return r.jogos?r.sofridos/r.jogos:0;},render:function(r){return (r.jogos?r.sofridos/r.jogos:0).toFixed(2);}},
     {label:'Pontuação',num:true,val:function(r){return r.total;}}],
-    (DATA.goleiros||[]),{defaultCol:6,defaultDir:'desc'});
+    (DATA.goleiros||[]),{defaultCol:9,defaultDir:'desc'});
 });
 
 /* ---------- Charts ---------- */
