@@ -61,9 +61,11 @@ main{max-width:1500px; margin:0 auto; padding:18px 18px 40px;}
 .grid{display:grid; gap:16px;}
 .grid.cols3{grid-template-columns:repeat(3,1fr);}
 .grid.cols2{grid-template-columns:1.1fr 1.4fr;}
+.grid.cols2-even{grid-template-columns:1fr 1fr;}
 @media (max-width:980px){
   .grid.cols3{grid-template-columns:1fr;}
   .grid.cols2{grid-template-columns:1fr;}
+  .grid.cols2-even{grid-template-columns:1fr;}
   header{padding:12px 14px;}
   .brand h1{font-size:1.3rem;}
   .brand-logo{width:34px;height:34px;}
@@ -162,7 +164,7 @@ footer{text-align:center; color:var(--faint); font-size:.74rem; font-family:var(
       </div>
     </div>
 
-    <div class="grid cols2" style="margin-top:16px; grid-template-columns:1fr 1fr;">
+    <div class="grid cols2 cols2-even" style="margin-top:16px;">
       <div class="card">
         <h2>Geral por Times</h2>
         <div class="tablewrap" id="tbl-times"></div>
