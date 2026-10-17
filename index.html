@@ -82,6 +82,7 @@ main{max-width:1500px; margin:0 auto; padding:18px 18px 40px;}
 .card .sub{font-family:var(--body); font-size:.76rem; color:var(--faint); text-align:center; margin:-6px 0 10px;}
 
 .tablewrap{overflow-x:auto; overflow-y:auto; max-height:340px;}
+#tbl-compare.tablewrap{max-height:560px;}
 table{width:100%; border-collapse:collapse; font-size:.86rem;}
 thead th{
   position:sticky; top:0; background:var(--panel); text-align:left; color:var(--faint);
@@ -555,7 +556,7 @@ safe(function(){
     {label:'Gols/Sábado',num:true,val:function(r){return totalRodadas?r.gols/totalRodadas:0;},render:function(r){return (totalRodadas?r.gols/totalRodadas:0).toFixed(2);}},
     {label:'Assist/Sábado',num:true,val:function(r){return totalRodadas?r.assist/totalRodadas:0;},render:function(r){return (totalRodadas?r.assist/totalRodadas:0).toFixed(2);}}],
     rows,{defaultCol:1,defaultDir:'desc',footer:['Total',tot.vit,tot.gols,tot.assist,'','','']});
-  var GOLEIRO_MIN_JOGOS=5;
+  var GOLEIRO_MIN_JOGOS=4;
   var goleiroRows=(DATA.goleiros||[]).filter(function(r){return r.jogos>=GOLEIRO_MIN_JOGOS;});
   sortableTable('tbl-goleiros',[rankCol(),
     {label:'Atleta',stick:true,stickLeft:30,val:function(r){return r.atleta;}},
@@ -732,14 +733,54 @@ safe(function(){
 
   function renderCompare(){
     var chosen=selects.map(function(s){return s.value;}).filter(function(v){return v;});
-    var rows=chosen.map(function(nm){var p=DATA.players[nm];return {atleta:nm,jogos:p.jogos,gols:p.gols,assist:p.assist,vit:p.vit,emp:p.emp,total:p.total};});
+    var totalRodadas=DATA.dates.length;
+    var rows=chosen.map(function(nm){var p=DATA.players[nm];return {atleta:nm,jogos:p.jogos,gols:p.gols,assist:p.assist,vit:p.vit,emp:p.emp,total:p.total,
+      zagJogos:p.zagueiroJogos||0, zagDias:p.zagueiroDias||0, golJogos:p.goleiroJogos||0};});
 
-    var html='<table><thead><tr><th>Atleta</th><th class="num">Jogos</th><th class="num">Gols</th><th class="num">Assist</th><th class="num">Vitórias</th><th class="num">Empates</th><th class="num">Total</th></tr></thead><tbody>';
-    if(rows.length===0){ html+='<tr><td colspan="7" style="text-align:center;color:var(--muted);">Selecione ao menos um atleta</td></tr>'; }
-    rows.forEach(function(r,i){
-      html+='<tr><td><span class="swatch" style="display:inline-block;background:'+CMP_COLORS[chosen.indexOf(r.atleta)]+';width:10px;height:10px;border-radius:3px;margin-right:6px;"></span>'+r.atleta+'</td>'+
-        '<td class="num">'+r.jogos+'</td><td class="num">'+r.gols+'</td><td class="num">'+r.assist+'</td>'+
-        '<td class="num">'+r.vit+'</td><td class="num">'+r.emp+'</td><td class="num">'+r.total+'</td></tr>';
+    function per(r,k){return r.jogos?r[k]/r.jogos:0;}
+    var f0=function(v){return String(Math.round(v));}, f2=function(v){return v.toFixed(2);}, fp=function(v){return v.toFixed(0)+'%';};
+    var indicators=[
+      {section:'Totais da temporada'},
+      {label:'Jogos (sábados)',val:function(r){return r.jogos;},fmt:f0},
+      {label:'Assiduidade',val:function(r){return totalRodadas?r.jogos/totalRodadas*100:0;},fmt:fp},
+      {label:'Gols',val:function(r){return r.gols;},fmt:f0},
+      {label:'Assistências',val:function(r){return r.assist;},fmt:f0},
+      {label:'Participação em gols (G+A)',val:function(r){return r.gols+r.assist;},fmt:f0},
+      {label:'Vitórias',val:function(r){return r.vit;},fmt:f0},
+      {label:'Empates',val:function(r){return r.emp;},fmt:f0},
+      {label:'Pontuação total',val:function(r){return r.total;},fmt:f0},
+      {section:'Média por sábado'},
+      {label:'Gols/Sábado',val:function(r){return per(r,'gols');},fmt:f2},
+      {label:'Assist/Sábado',val:function(r){return per(r,'assist');},fmt:f2},
+      {label:'Participação/Sábado',val:function(r){return r.jogos?(r.gols+r.assist)/r.jogos:0;},fmt:f2},
+      {label:'Vitórias/Sábado',val:function(r){return per(r,'vit');},fmt:f2},
+      {label:'Empates/Sábado',val:function(r){return per(r,'emp');},fmt:f2},
+      {label:'Pontos/Sábado',val:function(r){return per(r,'total');},fmt:f2},
+      {section:'Posições'},
+      {label:'Sábados como zagueiro',val:function(r){return r.zagDias;},fmt:f0},
+      {label:'Jogos sem sofrer gol (zagueiro)',val:function(r){return r.zagJogos;},fmt:f0},
+      {label:'Sábados no gol',val:function(r){return r.golJogos;},fmt:f0}
+    ];
+    var ncols=rows.length+1;
+    var html='<table><thead><tr><th class="stick" style="left:0">Indicador</th>';
+    rows.forEach(function(r){
+      html+='<th class="num"><span class="swatch" style="display:inline-block;background:'+CMP_COLORS[chosen.indexOf(r.atleta)]+';width:10px;height:10px;border-radius:3px;margin-right:6px;"></span>'+r.atleta+'</th>';
+    });
+    html+='</tr></thead><tbody>';
+    if(rows.length===0){ html+='<tr><td colspan="2" style="text-align:center;color:var(--muted);">Selecione ao menos um atleta</td></tr>'; }
+    else indicators.forEach(function(ind){
+      if(ind.section){
+        html+='<tr><td colspan="'+ncols+'" style="font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding-top:12px;">'+ind.section+'</td></tr>';
+        return;
+      }
+      var vals=rows.map(ind.val);
+      var best=Math.max.apply(null,vals);
+      html+='<tr><td class="stick" style="left:0">'+ind.label+'</td>';
+      vals.forEach(function(v){
+        var lead=rows.length>1 && v===best && best>0;
+        html+='<td class="num"'+(lead?' style="color:var(--gold);font-weight:600;"':'')+'>'+ind.fmt(v)+'</td>';
+      });
+      html+='</tr>';
     });
     html+='</tbody></table>';
     document.getElementById('tbl-compare').innerHTML=html;
