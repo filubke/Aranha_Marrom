@@ -151,7 +151,21 @@ details ul{padding-left:18px;margin:6px 0}
 .bar-in .st{font-size:13.5px;min-width:0}
 .bar-in .st b{font-variant-numeric:tabular-nums}
 .bar-in button{min-width:150px}
-@media (max-width:860px){input[type=text],select,input[type=number]{font-size:16px}}
+.tools2{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.selmsg{min-height:0;margin-bottom:6px}
+.selmsg:empty{display:none}
+.selmsg button{min-height:28px;padding:2px 10px;margin-left:8px}
+.pastebox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px;display:grid;gap:8px;margin-bottom:10px}
+.pastebox textarea{font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;resize:vertical;min-height:120px}
+#pasteOut{display:grid;gap:6px;margin-bottom:10px}
+#pasteOut:empty{display:none}
+.psum{font-size:13.5px}
+.pitem{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--warn-bg);border-radius:6px;padding:8px 10px;font-size:13.5px}
+.pitem.ok{background:var(--accent-soft);color:var(--fg)}
+.pitem .q{flex:1 1 100%;min-width:0;overflow-wrap:anywhere}
+.pitem select{flex:1 1 140px;min-width:0}
+.pitem button{min-height:34px}
+@media (max-width:860px){input[type=text],select,input[type=number],textarea{font-size:16px!important}}
 @media (max-width:480px){input[type=number]{width:46px;padding:8px 4px}th,td{padding:6px 3px}}
 .dl{display:inline-flex;align-items:center;min-height:38px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);background:var(--surface);text-decoration:none}
 @media (prefers-reduced-motion:no-preference){.team{animation:in .25s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
@@ -176,6 +190,20 @@ details ul{padding-left:18px;margin:6px 0}
           <input type="text" id="search" placeholder="Buscar atleta" aria-label="Buscar atleta" autocomplete="off">
           <label class="chk"><input type="checkbox" id="showAll"> Mostrar todos</label>
         </div>
+        <div class="tools2">
+          <button type="button" id="clearSel">Limpar seleção</button>
+          <button type="button" id="pasteBtn" aria-expanded="false" aria-controls="pastePanel">Colar lista de confirmados</button>
+          <button type="button" id="lastSat" class="btn-ghost">Repetir último sábado</button>
+        </div>
+        <div id="selMsg" class="hint selmsg" aria-live="polite"></div>
+        <div class="pastebox" id="pastePanel" hidden>
+          <label for="pasteTxt"><b>Lista de confirmados</b> <span class="hint">um nome por linha; pode colar direto do WhatsApp</span></label>
+          <textarea id="pasteTxt" rows="7" placeholder="1. Maicon&#10;2. Nuan&#10;3. Presidente Fernando&#10;Goleiros:&#10;Venilson&#10;Arcanjo"></textarea>
+          <label class="chk"><input type="checkbox" id="pasteReplace" checked> Substituir a seleção atual</label>
+          <div class="actions" style="margin-top:2px"><button type="button" id="pasteGo" class="btn-primary">Marcar confirmados</button><button type="button" id="pasteClose">Fechar</button></div>
+          <div class="hint">Escreva "Goleiros:" antes dos goleiros, ou "(goleiro)" ao lado do nome. Nomes parecidos pedem confirmação.</div>
+        </div>
+        <div id="pasteOut"></div>
         <div class="roster" id="roster" role="list"></div>
         <div class="legend"><span><b>Z</b> zagueiro</span><span><b>M</b> meia</span><span><b>A</b> atacante</span><span><b>G</b> goleiro</span></div>
         <div class="add">
@@ -282,13 +310,13 @@ const byName=n=>roster.find(p=>p.n===n);
 
 function init(){
   const ls=loadLS();
-  if(ls&&Array.isArray(ls.present)&&ls.present.length){
+  if(ls&&Array.isArray(ls.present)){
     custom=ls.custom||[]; buildRoster();
     present=new Set(ls.present.filter(n=>byName(n))); dayPos=ls.dayPos||{};
     opts=Object.assign(opts,ls.opts||{}); locks=ls.locks||locks;
   } else {
     buildRoster();
-    DATA.roster.forEach(p=>{ if(p.l){ present.add(p.n); dayPos[p.n]= p.lg?'G':(p.dp||p.p); } });
+    lastSat();
     result={example:true};
   }
   POS.forEach(()=>{});
@@ -578,6 +606,79 @@ $('#addBtn').onclick=function(){
   const p=$('#newPos').value; custom.push({n,p,conf:'b',obs:'',r:0,s:1.2,d:0,gr:0,gs:1.5,gd:0,gp:null,rec:0,ult:'',custom:1});
   buildRoster(); present.add(n); dayPos[n]=p; $('#newName').value=''; onSel();
 };
+/* ---------- limpar, colar lista, repetir último sábado ---------- */
+let undo=null, pasteReport=[], msgTimer=null;
+function lastSat(){ present=new Set(); dayPos={}; DATA.roster.forEach(p=>{ if(p.l){ present.add(p.n); dayPos[p.n]=p.lg?'G':(p.dp||p.p); } }); }
+function afterBulk(){ vagasManual=false; autoVagas(); changed(); renderAll(); }
+function selMsg(html){ const el=$('#selMsg'); el.innerHTML=html; clearTimeout(msgTimer); if(html) msgTimer=setTimeout(()=>{ el.innerHTML=''; },12000); }
+function snapshot(){ undo={present:new Set(present),dayPos:Object.assign({},dayPos)}; }
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+function lev(a,b){ if(Math.abs(a.length-b.length)>1) return 9; const m=[]; for(let i=0;i<=a.length;i++){ m[i]=[i]; } for(let j=0;j<=b.length;j++) m[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++) m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return m[a.length][b.length]; }
+function matchName(raw){
+  const q=norm(raw); if(!q) return {status:'skip'};
+  const all=roster.map(p=>({p,n:norm(p.n)}));
+  const qw=q.split(' ');
+  const exact=all.filter(x=>x.n===q);
+  const words=all.filter(x=>x.n!==q&&qw.every(w=>x.n.split(' ').includes(w)));
+  if(exact.length){ const act=words.filter(x=>x.p.rec>0); if(act.length) return {status:'amb',cands:exact.concat(act).map(x=>x.p)}; return {status:'ok',p:exact[0].p}; }
+  if(words.length===1) return {status:'ok',p:words[0].p};
+  if(words.length>1){ const act=words.filter(x=>x.p.rec>0); if(act.length===1) return {status:'ok',p:act[0].p}; return {status:'amb',cands:words.map(x=>x.p)}; }
+  if(q.length>=4){ const f=all.filter(x=>lev(x.n,q)<=1); if(f.length===1) return {status:'ok',p:f[0].p}; if(f.length>1) return {status:'amb',cands:f.map(x=>x.p)}; }
+  return {status:'nf'};
+}
+function parseList(txt){
+  const items=[]; let mode=null;
+  txt.split(/\r?\n|;/).forEach(line=>{
+    const t=line.replace(/[‎‏‪-‮️]/g,'').trim();
+    if(/:\s*$/.test(t)){ mode=/goleir/i.test(t)?'G':null; return; }
+    t.split(',').forEach(seg=>{
+      let s=seg.trim(); if(!s) return;
+      if(/confirmad|presen[cç]a|lista|s[aá]bado|\d{1,2}\/\d{1,2}|^total/i.test(s)) return;
+      const par=(s.match(/\(([^)]*)\)/)||[])[1]||''; s=s.replace(/\([^)]*\)/g,' ');
+      s=s.replace(/^\s*\d+\s*[\.\)\-–:]*\s*/,'').replace(/^[^\p{L}]+/u,'').replace(/[^\p{L}\p{N}]+$/u,'').replace(/\s+/g,' ').trim();
+      if(!s) return;
+      items.push({raw:s,g:mode==='G'||/gol/i.test(par)});
+    });
+  });
+  return items;
+}
+function markP(p,g){ present.add(p.n); if(g) dayPos[p.n]='G'; }
+function renderPaste(ok){
+  const need=pasteReport.filter(x=>x.status==='amb'||x.status==='nf').length;
+  let h='<div class="psum"><b>'+present.size+'</b> marcados'+(need?' · <b>'+need+'</b> para conferir':'')+'.</div>';
+  pasteReport.forEach((x,i)=>{
+    if(x.status==='ok') h+='<div class="pitem ok"><span class="q">"'+esc(x.raw)+'" entendido como <b>'+esc(x.p.n)+'</b></span></div>';
+    else if(x.status==='amb') h+='<div class="pitem"><span class="q">"'+esc(x.raw)+'" pode ser:</span><select id="pk-'+i+'" aria-label="Quem é '+esc(x.raw)+'">'+'<option value="">Escolha…</option>'+x.cands.map(c=>'<option value="'+esc(c.n)+'">'+esc(c.n)+(c.rec>0?'':' (inativo)')+'</option>').join('')+'</select><button type="button" data-pk="'+i+'">Marcar</button><button type="button" data-skip="'+i+'" class="btn-ghost">Ignorar</button></div>';
+    else if(x.status==='nf') h+='<div class="pitem"><span class="q">"'+esc(x.raw)+'" não está no elenco.</span><select id="np-'+i+'" aria-label="Posição de '+esc(x.raw)+'"><option value="M">Meia</option><option value="Z">Zagueiro</option><option value="A">Atacante</option><option value="G"'+(x.g?' selected':'')+'>Goleiro</option></select><button type="button" data-nn="'+i+'">Adicionar e marcar</button><button type="button" data-skip="'+i+'" class="btn-ghost">Ignorar</button></div>';
+  });
+  $('#pasteOut').innerHTML=h;
+}
+function applyPaste(){
+  const items=parseList($('#pasteTxt').value); if(!items.length){ $('#pasteOut').innerHTML='<div class="pitem"><span class="q">Nenhum nome encontrado no texto.</span></div>'; return; }
+  snapshot();
+  if($('#pasteReplace').checked){ present=new Set(); dayPos={}; }
+  pasteReport=[];
+  items.forEach(it=>{ const m=matchName(it.raw); if(m.status==='ok'){ markP(m.p,it.g); if(norm(it.raw)!==norm(m.p.n)) pasteReport.push(Object.assign({},m,{raw:it.raw})); }
+    else if(m.status==='amb'||m.status==='nf') pasteReport.push(Object.assign({},m,{raw:it.raw,g:it.g})); });
+  afterBulk(); renderPaste();
+  selMsg('Lista aplicada. <button type="button" data-undo="1">Desfazer</button>');
+}
+function dropReport(i){ pasteReport.splice(i,1); renderPaste(); }
+$('#clearSel').onclick=function(){ if(!present.size) return; snapshot(); present=new Set(); dayPos={}; pasteReport=[]; $('#pasteOut').innerHTML=''; afterBulk(); selMsg('Seleção limpa. <button type="button" data-undo="1">Desfazer</button>'); };
+$('#lastSat').onclick=function(){ snapshot(); lastSat(); pasteReport=[]; $('#pasteOut').innerHTML=''; afterBulk(); selMsg('Atletas do último sábado marcados ('+DATA.meta.ate+'). <button type="button" data-undo="1">Desfazer</button>'); };
+$('#pasteBtn').onclick=function(){ const p=$('#pastePanel'); p.hidden=!p.hidden; this.setAttribute('aria-expanded',String(!p.hidden)); if(!p.hidden) $('#pasteTxt').focus(); };
+$('#pasteClose').onclick=function(){ $('#pastePanel').hidden=true; $('#pasteBtn').setAttribute('aria-expanded','false'); };
+$('#pasteGo').onclick=applyPaste;
+document.addEventListener('click',function(e){
+  const t=e.target.closest('button'); if(!t) return;
+  if(t.dataset.undo&&undo){ present=undo.present; dayPos=undo.dayPos; undo=null; pasteReport=[]; $('#pasteOut').innerHTML=''; afterBulk(); selMsg('Seleção anterior restaurada.'); return; }
+  if(t.dataset.pk!==undefined){ const i=+t.dataset.pk; const v=$('#pk-'+i).value; if(!v) return; markP(byName(v),pasteReport[i].g); dropReport(i); afterBulk(); renderPaste(); return; }
+  if(t.dataset.nn!==undefined){ const i=+t.dataset.nn; const x=pasteReport[i]; const pos=$('#np-'+i).value; const nm=x.raw;
+    if(!byName(nm)){ custom.push({n:nm,p:pos,conf:'b',obs:'',r:0,s:1.2,d:0,gr:0,gs:1.5,gd:0,gp:null,rec:0,ult:'',custom:1}); buildRoster(); }
+    present.add(nm); dayPos[nm]=pos; dropReport(i); afterBulk(); renderPaste(); return; }
+  if(t.dataset.skip!==undefined){ dropReport(+t.dataset.skip); return; }
+});
 init();
 })();
 </script>
