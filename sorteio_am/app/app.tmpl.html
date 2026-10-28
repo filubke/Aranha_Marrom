@@ -136,6 +136,20 @@ details ul{padding-left:18px;margin:6px 0}
 .bar-in .st b{font-variant-numeric:tabular-nums}
 .bar-in button{min-width:150px}
 .rules{display:grid;gap:8px}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:'▸';display:inline-block;width:1.1em;color:var(--accent);transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+.rbox>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;min-height:38px;padding:6px 0}
+.rbox>summary .rt{font-family:var(--display);font-weight:700;font-size:22px}
+.rsum{font-size:14px;color:var(--muted)}
+.rgrp{border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.rgrp>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 12px;min-height:44px;font-weight:600}
+.rgrp>summary .gs{font-weight:400;color:var(--muted);font-size:14px}
+.rgrp .gbody{display:grid;gap:8px;padding:0 10px 10px}
+.rgrp .gtools{display:flex;justify-content:flex-end}
+.rgrp .gtools button{min-height:32px;font-size:14px}
+.rgrp .none{margin:0;color:var(--muted);font-size:14px}
 .rule{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .rule.off b{text-decoration:line-through;color:var(--muted)}
 .rule .chk{flex:1 1 120px;min-width:0;color:var(--fg)}
@@ -247,15 +261,17 @@ body.sel-on{padding-block:20px 220px}
         </div>
       </div>
 
-      <div class="sec" aria-labelledby="h-rules">
-        <div class="sec-h"><h2 id="h-rules">Quem não joga junto</h2></div>
-        <p class="hint" style="margin:0 0 10px">Regras do grupo, salvas neste aparelho. Ative ou desative cada uma. Com a regra ativa, o sorteio separa os dois.</p>
-        <div class="rules" id="rules"></div>
-        <div class="add">
-          <select id="rlA" aria-label="Primeiro atleta da regra"></select>
-          <select id="rlB" aria-label="Segundo atleta da regra"></select>
-          <button type="button" id="rlAdd">Adicionar regra</button>
-        </div>
+      <div class="sec" id="rulesSec">
+        <details class="rbox" id="rulesBox">
+          <summary><span class="rt" id="h-rules">Quem não joga junto</span><span class="rsum" id="rulesSum"></span></summary>
+          <p class="hint" style="margin:10px 0">Regras do grupo, salvas neste aparelho. Com a regra ativa, o sorteio separa os dois atletas. Abra cada grupo para ligar, desligar ou remover.</p>
+          <div class="rules" id="rules"></div>
+          <div class="add">
+            <select id="rlA" aria-label="Primeiro atleta da regra"></select>
+            <select id="rlB" aria-label="Segundo atleta da regra"></select>
+            <button type="button" id="rlAdd">Adicionar regra</button>
+          </div>
+        </details>
       </div>
 
       <div class="sec" aria-labelledby="h-res" id="resSec">
@@ -322,7 +338,7 @@ function initRules(ls){
   rulesRemoved=new Set(fresh?[]:(ls.rulesRemoved||[]));
   rules=((ls&&ls.rules)||[]).filter(r=>r&&r.a&&r.b&&(!fresh||r.src==='adicionada aqui'));
   const have=new Set(rules.map(r=>rkey(r.a,r.b)));
-  (DATA.rules||[]).forEach(r=>{ const k=rkey(r.a,r.b); if(!have.has(k)&&!rulesRemoved.has(k)) rules.push({a:r.a,b:r.b,on:r.on!==false,src:r.src||'regra do grupo'}); });
+  (DATA.rules||[]).forEach(r=>{ const k=rkey(r.a,r.b); if(!have.has(k)&&!rulesRemoved.has(k)) rules.push({a:r.a,b:r.b,on:r.on!==false,src:r.src||'',grp:r.grp||'esp'}); });
 }
 
 let roster=[];
@@ -451,22 +467,33 @@ function renderRuleSelects(){
   const opt='<option value="">Atleta…</option>'+roster.map(p=>'<option>'+esc(p.n)+'</option>').join('');
   ['rlA','rlB'].forEach(id=>{ const el=$('#'+id); const v=el.value; el.innerHTML=opt; if(roster.some(p=>p.n===v)) el.value=v; });
 }
+const RGRP=[['melhores','Melhores jogadores','Chico, Predador e Berg ficam em times diferentes'],['g50','Grupo 50+','Adriano, Elton e Alexandre ficam em times diferentes'],['esp','Regras específicas','Duplas que não podem ficar juntas']];
+const rOpen=new Set();
+function ruleHTML(r,i,avg){
+  const a=isLine(r.a), b=isLine(r.b); let badge, viol=false;
+  if(!(a&&b)){ const miss=[!a?r.a:null,!b?r.b:null].filter(Boolean); badge='<span class="pill mute">fora hoje: '+miss.map(esc).join(' e ')+'</span>'; }
+  else if(result&&result.teams&&teamOf(r.a)>=0&&teamOf(r.b)>=0){
+    const ta=teamOf(r.a), tb=teamOf(r.b); viol=ta===tb;
+    badge=viol?'<span class="pill bad">juntos no '+COLORS[ta].n+'</span>':'<span class="pill ok">times diferentes</span>';
+  } else badge=r.on?'<span class="pill ok">serão separados</span>':'<span class="pill bad">podem cair juntos</span>';
+  const ev=pairEvid(r.a,r.b);
+  const evt=ev?('Juntos em '+ev[0]+' sábados: '+ptsFmt(ev[1])+' pts por sábado (média geral '+ptsFmt(avg)+')'):'Sem histórico relevante jogando juntos';
+  return {viol,html:'<div class="rule'+(r.on?'':' off')+'"><label class="chk"><input type="checkbox" data-rule="'+i+'"'+(r.on?' checked':'')+' aria-label="Ativar regra '+esc(r.a)+' e '+esc(r.b)+'"><b>'+esc(r.a)+' × '+esc(r.b)+'</b></label>'+badge+
+    '<button type="button" class="rm" data-rrm="'+i+'" aria-label="Remover regra">✕</button><span class="ev">'+evt+(r.src?' · '+esc(r.src):'')+'</span></div>'};
+}
 function renderRules(){
   const el=$('#rules'); if(!el) return;
-  if(!rules.length){ el.innerHTML='<p class="hint">Nenhuma regra cadastrada.</p>'; return; }
-  const avg=DATA.meta.avgPts;
-  el.innerHTML=rules.map((r,i)=>{
-    const a=isLine(r.a), b=isLine(r.b); let badge;
-    if(!(a&&b)){ const miss=[!a?r.a:null,!b?r.b:null].filter(Boolean); badge='<span class="pill mute">fora hoje: '+miss.map(esc).join(' e ')+'</span>'; }
-    else if(result&&result.teams&&teamOf(r.a)>=0&&teamOf(r.b)>=0){
-      const ta=teamOf(r.a), tb=teamOf(r.b);
-      badge=ta===tb?'<span class="pill bad">juntos no '+COLORS[ta].n+'</span>':'<span class="pill ok">times diferentes</span>';
-    } else badge=r.on?'<span class="pill ok">serão separados</span>':'<span class="pill bad">podem cair juntos</span>';
-    const ev=pairEvid(r.a,r.b);
-    const evt=ev?('Juntos em '+ev[0]+' sábados: '+ptsFmt(ev[1])+' pts por sábado (média geral '+ptsFmt(avg)+')'):'Sem histórico relevante jogando juntos';
-    return '<div class="rule'+(r.on?'':' off')+'"><label class="chk"><input type="checkbox" data-rule="'+i+'"'+(r.on?' checked':'')+' aria-label="Ativar regra '+esc(r.a)+' e '+esc(r.b)+'"><b>'+esc(r.a)+' × '+esc(r.b)+'</b></label>'+badge+
-      '<button type="button" class="rm" data-rrm="'+i+'" aria-label="Remover regra">✕</button><span class="ev">'+evt+(r.src?' · '+esc(r.src):'')+'</span></div>';
+  const avg=DATA.meta.avgPts; let nOn=0, nViol=0;
+  el.innerHTML=RGRP.map(([k,nome,desc])=>{
+    const items=rules.map((r,i)=>[r,i]).filter(([r])=>(r.grp||'esp')===k);
+    const rr=items.map(([r,i])=>({r,x:ruleHTML(r,i,avg)}));
+    const on=items.filter(([r])=>r.on).length, viol=rr.filter(o=>o.r.on&&o.x.viol).length;
+    nOn+=on; nViol+=viol;
+    const allOn=items.length>0&&on===items.length;
+    return '<details class="rgrp" data-g="'+k+'"'+(rOpen.has(k)?' open':'')+'><summary><span>'+nome+'</span><span class="gs">'+(items.length?on+' de '+items.length+' ativas':'nenhuma regra')+'</span>'+(viol?'<span class="pill bad">'+viol+' violada'+(viol>1?'s':'')+'</span>':'')+'</summary><div class="gbody"><p class="hint" style="margin:0">'+desc+'</p>'+
+      (items.length?'<div class="gtools"><button type="button" data-gall="'+k+'" data-v="'+(allOn?0:1)+'">'+(allOn?'Desativar todas':'Ativar todas')+'</button></div>'+rr.map(o=>o.x.html).join(''):'<p class="none">Use o formulário abaixo para adicionar.</p>')+'</div></details>';
   }).join('');
+  const s=$('#rulesSum'); if(s) s.innerHTML=nOn+' de '+rules.length+' regras ativas'+(nViol?' · <b style="color:var(--bad)">'+nViol+' violada'+(nViol>1?'s':'')+'</b>':'');
 }
 
 /* ---------- sorteio ---------- */
@@ -789,9 +816,10 @@ document.addEventListener('click',function(e){
   if(b.id==='undoEdits'&&result.orig){ result.teams.forEach((tm,i)=>{ tm.players=result.orig[i].map(p=>Object.assign({},p)); }); result._key=null; sel=null; swapping=null; result.edited=false; return renderResult(); }
 });
 $('#rules').addEventListener('change',function(e){ const c=e.target; if(c.dataset.rule===undefined) return; rules[+c.dataset.rule].on=c.checked; saveLS(); renderRules(); });
-$('#rules').addEventListener('click',function(e){ const b=e.target.closest('button'); if(!b||b.dataset.rrm===undefined) return; const r=rules.splice(+b.dataset.rrm,1)[0]; rulesRemoved.add(rkey(r.a,r.b)); saveLS(); renderRules(); });
+$('#rules').addEventListener('toggle',function(e){ const g=e.target.dataset&&e.target.dataset.g; if(g){ e.target.open?rOpen.add(g):rOpen.delete(g); } },true);
+$('#rules').addEventListener('click',function(e){ const b=e.target.closest('button'); if(b&&b.dataset.gall!==undefined){ const k=b.dataset.gall,v=b.dataset.v==='1'; rules.forEach(r=>{ if((r.grp||'esp')===k) r.on=v; }); saveLS(); renderRules(); return; } if(!b||b.dataset.rrm===undefined) return; const r=rules.splice(+b.dataset.rrm,1)[0]; rulesRemoved.add(rkey(r.a,r.b)); saveLS(); renderRules(); });
 $('#rlAdd').onclick=function(){ const a=$('#rlA').value,b=$('#rlB').value; if(!a||!b||a===b) return; const k=rkey(a,b);
-  if(rules.some(r=>rkey(r.a,r.b)===k)) return; rulesRemoved.delete(k); rules.push({a,b,on:true,src:'adicionada aqui'}); saveLS(); renderRules(); };
+  if(rules.some(r=>rkey(r.a,r.b)===k)) return; rulesRemoved.delete(k); rules.push({a,b,on:true,src:'adicionada aqui',grp:'esp'}); rOpen.add('esp'); $('#rulesBox').open=true; saveLS(); renderRules(); };
 init();
 })();
 </script>
