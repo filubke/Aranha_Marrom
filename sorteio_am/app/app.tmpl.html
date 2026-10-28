@@ -316,10 +316,11 @@ let rules=[]; let rulesRemoved=new Set();
 const rkey=(a,b)=>[a,b].sort((x,y)=>x.localeCompare(y,'pt-BR')).join('|');
 
 function loadLS(){ try{ const o=JSON.parse(localStorage.getItem(LSKEY)||'null'); return o; }catch(e){return null;} }
-function saveLS(){ try{ localStorage.setItem(LSKEY,JSON.stringify({custom,present:[...present],dayPos,opts,locks,rules,rulesRemoved:[...rulesRemoved]})); }catch(e){} }
+function saveLS(){ try{ localStorage.setItem(LSKEY,JSON.stringify({custom,present:[...present],dayPos,opts,locks,rules,rulesRemoved:[...rulesRemoved],rulesVer:DATA.rulesVer})); }catch(e){} }
 function initRules(ls){
-  rulesRemoved=new Set((ls&&ls.rulesRemoved)||[]);
-  rules=((ls&&ls.rules)||[]).filter(r=>r&&r.a&&r.b);
+  const fresh=!ls||ls.rulesVer!==DATA.rulesVer; /* lista padrão mudou: descarta as regras antigas do grupo, mantém as adicionadas manualmente */
+  rulesRemoved=new Set(fresh?[]:(ls.rulesRemoved||[]));
+  rules=((ls&&ls.rules)||[]).filter(r=>r&&r.a&&r.b&&(!fresh||r.src==='adicionada aqui'));
   const have=new Set(rules.map(r=>rkey(r.a,r.b)));
   (DATA.rules||[]).forEach(r=>{ const k=rkey(r.a,r.b); if(!have.has(k)&&!rulesRemoved.has(k)) rules.push({a:r.a,b:r.b,on:r.on!==false,src:r.src||'regra do grupo'}); });
 }
