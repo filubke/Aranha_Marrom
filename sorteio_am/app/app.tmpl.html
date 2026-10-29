@@ -469,17 +469,30 @@ function renderRuleSelects(){
 }
 const RGRP=[['melhores','Melhores jogadores','Chico, Predador e Berg ficam em times diferentes'],['g50','Grupo 50+','Adriano, Elton e Alexandre ficam em times diferentes'],['esp','Regras específicas','Duplas que não podem ficar juntas']];
 const rOpen=new Set();
+function isGK(n){ const p=byName(n); return !!p&&posOf(p)==='G'; }
+function isPres(n){ return !!byName(n)&&present.has(n); }
+function ruleStatus(r){
+  const miss=[r.a,r.b].filter(n=>!isPres(n)); if(miss.length) return {st:'out',miss};
+  const ga=isGK(r.a), gb=isGK(r.b); if(ga&&gb) return {st:'none'};
+  if(!result||!result.teams) return {st:'none'};
+  if(ga||gb){ const g=ga?r.a:r.b, l=ga?r.b:r.a; const tl=teamOf(l); if(tl<0) return {st:'none'}; const T=result.teams[tl];
+    if(T.gk.length===1) return T.gk[0]===g?{st:'viol',txt:g+' é o goleiro do '+COLORS[tl].n}:{st:'ok',txt:'goleiro em outro time'};
+    if(T.gk[0]&&T.gk[0].indexOf('(joga mais)')>0) return T.gk[1]===g?{st:'ok',txt:g+' joga menos com o '+COLORS[tl].n+' (1/3 dos jogos)'}:{st:'viol',txt:g+' joga mais com o '+COLORS[tl].n};
+    return {st:'viol',txt:g+' reveza com o '+COLORS[tl].n}; }
+  const ta=teamOf(r.a), tb=teamOf(r.b); if(ta<0||tb<0) return {st:'none'};
+  return ta===tb?{st:'viol',txt:'juntos no '+COLORS[ta].n}:{st:'ok',txt:'times diferentes'};
+}
 function ruleHTML(r,i,avg){
-  const a=isLine(r.a), b=isLine(r.b); let badge, viol=false;
-  if(!(a&&b)){ const miss=[!a?r.a:null,!b?r.b:null].filter(Boolean); badge='<span class="pill mute">fora hoje: '+miss.map(esc).join(' e ')+'</span>'; }
-  else if(result&&result.teams&&teamOf(r.a)>=0&&teamOf(r.b)>=0){
-    const ta=teamOf(r.a), tb=teamOf(r.b); viol=ta===tb;
-    badge=viol?'<span class="pill bad">juntos no '+COLORS[ta].n+'</span>':'<span class="pill ok">times diferentes</span>';
-  } else badge=r.on?'<span class="pill ok">serão separados</span>':'<span class="pill bad">podem cair juntos</span>';
+  const S=ruleStatus(r); let badge, viol=S.st==='viol';
+  if(S.st==='out') badge='<span class="pill mute">fora hoje: '+S.miss.map(esc).join(' e ')+'</span>';
+  else if(S.st==='ok') badge='<span class="pill ok">'+esc(S.txt)+'</span>';
+  else if(S.st==='viol') badge='<span class="pill bad">'+esc(S.txt)+'</span>';
+  else badge=r.on?'<span class="pill ok">serão separados</span>':'<span class="pill bad">podem cair juntos</span>';
   const ev=pairEvid(r.a,r.b);
   const evt=ev?('Juntos em '+ev[0]+' sábados: '+ptsFmt(ev[1])+' pts por sábado (média geral '+ptsFmt(avg)+')'):'Sem histórico relevante jogando juntos';
+  const gnote=(isGK(r.a)!==isGK(r.b))?' · Goleiro e jogador de linha: com 3 goleiros ficam em times diferentes; com 2 goleiros o time do jogador fica com o goleiro o mínimo possível (1/3 dos jogos)':'';
   return {viol,html:'<div class="rule'+(r.on?'':' off')+'"><label class="chk"><input type="checkbox" data-rule="'+i+'"'+(r.on?' checked':'')+' aria-label="Ativar regra '+esc(r.a)+' e '+esc(r.b)+'"><b>'+esc(r.a)+' × '+esc(r.b)+'</b></label>'+badge+
-    '<button type="button" class="rm" data-rrm="'+i+'" aria-label="Remover regra">✕</button><span class="ev">'+evt+(r.src?' · '+esc(r.src):'')+'</span></div>'};
+    '<button type="button" class="rm" data-rrm="'+i+'" aria-label="Remover regra">✕</button><span class="ev">'+evt+(r.src?' · '+esc(r.src):'')+gnote+'</span></div>'};
 }
 function renderRules(){
   const el=$('#rules'); if(!el) return;
@@ -510,6 +523,7 @@ function draw(){
   const idxOf={}; lp.forEach((p,i)=>idxOf[p.n]=i);
   const J=locks.juntos.filter(x=>x[0] in idxOf&&x[1] in idxOf).map(x=>[idxOf[x[0]],idxOf[x[1]]]);
   const S_=locks.separados.concat(rules.filter(r=>r.on).map(r=>[r.a,r.b])).filter(x=>x[0] in idxOf&&x[1] in idxOf).map(x=>[idxOf[x[0]],idxOf[x[1]]]);
+  const GKR=rules.filter(r=>r.on).map(r=>{ const ga=gks.findIndex(g=>g.n===r.a), gb=gks.findIndex(g=>g.n===r.b); if(ga>=0&&gb<0&&r.b in idxOf) return [ga,idxOf[r.b]]; if(gb>=0&&ga<0&&r.a in idxOf) return [gb,idxOf[r.a]]; return null; }).filter(Boolean);
   // goleiros: tabelas por configuração (0..5)
   const ng=gks.length; const eff=[],sig=[];
   for(let c=0;c<6;c++){
@@ -529,6 +543,9 @@ function draw(){
     let bad=false; for(const [a,b] of J){ if(tmp[a]!==tmp[b]){bad=true;break;} } if(bad) continue;
     for(const [a,b] of S_){ if(tmp[a]===tmp[b]){bad=true;break;} } if(bad) continue;
     const cfg=ng>=2?RNG.int(6):0;
+    if(GKR.length&&ng>=2){ let gbad=false; for(const [g,i] of GKR){ const t=tmp[i];
+      if(ng===3){ if(permsOf3()[cfg][t]===g){gbad=true;break;} }
+      else { const ex=Math.floor(cfg/2), x=cfg%2; if(!(t===ex&&x!==g)){gbad=true;break;} } } if(gbad) continue; }
     S[0]=S[1]=S[2]=0; V[0]=V[1]=V[2]=0; for(let g=0;g<3;g++){Sp[g][0]=Sp[g][1]=Sp[g][2]=0;}
     for(let i=0;i<L;i++){ const t=tmp[i]; S[t]+=r[i]; Sp[posIdx[i]][t]+=r[i]; V[t]+=s2[i]; }
     for(let t=0;t<3;t++){ S[t]+=eff[cfg][t]; V[t]+=sig[cfg][t]; }
@@ -615,8 +632,8 @@ function renderResult0(){
     const comp=POS.filter(g=>cn[g]).map(g=>cn[g]+g).join(' · ');
     return '<article class="team '+t.c.k+'" data-team="'+ti+'"><header><div><h3>'+t.c.n+'</h3><small>'+t.players.length+' atletas<br>'+comp.replace(/ · /g,' ')+'</small></div><small class="pw" title="Força prevista em pontos por sábado, relativa à média dos 3 times">'+fmt(t.D).replace('.',',')+' pts</small></header><ul class="plist">'+lis+gk+'</ul></article>';
   }).join('')+'</div>';
-  const bothIn=rules.filter(x=>teamOf(x.a)>=0&&teamOf(x.b)>=0);
-  const viol=bothIn.filter(x=>teamOf(x.a)===teamOf(x.b));
+  const bothIn=rules.filter(x=>{ const s=ruleStatus(x).st; return s==='ok'||s==='viol'; });
+  const viol=bothIn.filter(x=>ruleStatus(x).st==='viol');
   if(viol.length) h+='<div class="banner">Atenção: '+viol.map(x=>esc(x.a)+' e '+esc(x.b)+' estão no mesmo time ('+(x.on?'regra ativa quebrada pela troca':'regra desativada')+')').join('; ')+'.</div>';
   else{ const act=bothIn.filter(x=>x.on).length; if(act) h+='<div class="note">Regras de incompatibilidade respeitadas: '+act+'.</div>'; }
   if(r.gkInfo) h+='<div class="note">'+esc(r.gkInfo)+'</div>';
