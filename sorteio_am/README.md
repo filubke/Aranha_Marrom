@@ -40,6 +40,8 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 4. Copie `roster` e `meta` para `dados/data.json`, mantendo `pairstat` e `rules`.
 5. Em `app/`: `python build.py` e faça commit de `index.html`.
 
+Cada teste grava uma linha em `dados/historico_modelo.csv` (data, último sábado, R², erro, campeões acertados). Para comparar versões do modelo ao longo do tempo, olhe esse arquivo e o histórico do `dados/data.json` no Git (cada atualização é um commit).
+
 Resultado do teste em 29/10/2026 (últimos 8 sábados): R² fora da amostra 0,21, correlação 0,46, erro médio 2,8 pts contra 3,3 pts de "todos iguais", campeão acertado em 5 de 8 (acaso = 1 em 3).
 
 Sugestão: registrar na planilha se o sorteio foi aleatório, manual ou pelo app, para o modelo não aprender o gosto de quem montou os times.
