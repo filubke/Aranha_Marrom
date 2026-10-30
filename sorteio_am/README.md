@@ -35,12 +35,13 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 ## Atualizar com novos sábados (teste primeiro, treino depois)
 
 1. Lance o sábado na planilha e exporte para `dados/bola_de_ouro_2026_export.txt` (ou peça ao Claude para atualizar a base).
-2. **Teste:** em `modelo/`, `python avaliar_sabados.py 8`. Para cada um dos últimos 8 sábados o modelo é treinado só com o que veio antes e prevê a força de cada time. O script compara com os pontos reais (erro médio, R², se acertou o time campeão). O sábado novo é o último da lista.
-3. **Treino:** `python load.py && python final_fit.py && python gk.py && python pairs.py && python export.py` (gera `dados/data_modelo.json`).
-4. Copie `roster` e `meta` para `dados/data.json`, mantendo `pairstat` e `rules`.
-5. Em `app/`: `python build.py` e faça commit de `index.html`.
+2. **Teste prospectivo** (o de verdade): em `modelo/`, `python avaliar_novos.py`. O modelo congelado em `dados/data.json` (treinado até a data `meta.ate`) prevê os sábados posteriores a essa data, usando a escalação real da planilha, e o resultado vai para `dados/historico_previsoes.csv`.
+3. **Teste retroativo:** `python avaliar_sabados.py 8`. Para cada um dos últimos 8 sábados o modelo é treinado só com o que veio antes. Grava uma linha em `dados/historico_modelo.csv`, identificada pela coluna `base_ate` (data do último sábado da base usada).
+4. **Treino:** `python load.py && python final_fit.py && python gk.py && python pairs.py && python export.py` (gera `dados/data_modelo.json`).
+5. Copie `roster` e `meta` para `dados/data.json`, mantendo `pairstat` e `rules`. A data `meta.ate` passa a ser a do último sábado novo.
+6. Em `app/`: `python build.py` e faça commit de `index.html`.
 
-Cada teste grava uma linha em `dados/historico_modelo.csv` (data, último sábado, R², erro, campeões acertados). Para comparar versões do modelo ao longo do tempo, olhe esse arquivo e o histórico do `dados/data.json` no Git (cada atualização é um commit).
+Ordem importa: o passo 2 tem de rodar **antes** do treino (passos 4 e 5), senão o modelo já viu os sábados novos.
 
 Resultado do teste em 29/10/2026 (últimos 8 sábados): R² fora da amostra 0,21, correlação 0,46, erro médio 2,8 pts contra 3,3 pts de "todos iguais", campeão acertado em 5 de 8 (acaso = 1 em 3).
 

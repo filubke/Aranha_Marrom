@@ -41,14 +41,14 @@ print("Ordem dos times nas colunas:", TEAMS)
 import csv, os, datetime
 H = os.path.join('..', 'dados', 'historico_modelo.csv')
 ultimo = str(days[-1])[:10]
-campos = ['rodado_em', 'ultimo_sabado', 'sabados_validos', 'janela_teste', 'r2_fora_amostra', 'correlacao', 'erro_medio_modelo', 'erro_medio_todos_iguais', 'campeao_acertos']
-linha = dict(rodado_em=datetime.date.today().isoformat(), ultimo_sabado=ultimo, sabados_validos=len(days), janela_teste=K,
+campos = ['rodado_em', 'base_ate', 'sabados_validos', 'janela_teste', 'r2_fora_amostra', 'correlacao', 'erro_medio_modelo', 'erro_medio_todos_iguais', 'campeao_acertos']
+linha = dict(rodado_em=datetime.date.today().isoformat(), base_ate=ultimo, sabados_validos=len(days), janela_teste=K,
              r2_fora_amostra=round(float(r2), 3), correlacao=round(float(np.corrcoef(P_all, Y_all)[0, 1]), 3),
              erro_medio_modelo=round(float(np.abs(P_all - Y_all).mean()), 2), erro_medio_todos_iguais=round(float(np.abs(Y_all).mean()), 2),
              campeao_acertos=f"{sum(r[3] for r in rows)}/{len(rows)}")
 antigas = []
 if os.path.exists(H):
-    antigas = [l for l in csv.DictReader(open(H, encoding='utf-8')) if l['ultimo_sabado'] != ultimo or l['janela_teste'] != str(K)]
+    antigas = [l for l in csv.DictReader(open(H, encoding='utf-8')) if l['base_ate'] != ultimo or l['janela_teste'] != str(K)]
 with open(H, 'w', newline='', encoding='utf-8') as f:
     w = csv.DictWriter(f, fieldnames=campos); w.writeheader(); w.writerows(antigas + [linha])
 print('Histórico atualizado em', H)
