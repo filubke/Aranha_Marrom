@@ -2,8 +2,9 @@ import csv, io, re, sys
 import pandas as pd
 SRC='../dados/bola_de_ouro_2026_export.txt'
 txt=open(SRC,encoding='utf-8').read().split('\n')
-# sheet 2026: lines 2..803 (1-indexed) -> idx 1..802
-rows=list(csv.reader(txt[1:803]))
+# aba 2026: da linha 2 até a próxima linha '## Sheet name:' (ou o fim do arquivo)
+end=next((i for i,l in enumerate(txt[1:],1) if l.startswith('## Sheet name:')),len(txt))
+rows=list(csv.reader(txt[1:end]))
 hdr=rows[0]; data=rows[1:]
 MON={'Jan':1,'Feb':2,'Mar':3,'Apr':4,'May':5,'Jun':6,'Jul':7,'Aug':8,'Sep':9,'Oct':10,'Nov':11,'Dec':12}
 def pdate(s):

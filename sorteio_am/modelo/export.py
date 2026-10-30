@@ -1,5 +1,6 @@
 import pandas as pd, numpy as np, json, itertools
 from load import df
+import model as M0
 sk=pd.read_pickle('skills.pkl').set_index('atleta')
 gk=pd.read_pickle('gk.pkl').set_index('atleta')
 pos=pd.read_csv('../dados/posicoes_propostas.csv').set_index('Atleta')
@@ -33,13 +34,31 @@ for a in pos.index:
         e['gr']=0.0; e['gs']=1.5; e['gd']=0; e['gp']=None
     e['rec']=int(rec.get(a,0))+int(recg.get(a,0))
     e['ult']=ult[a].strftime('%d/%m/%Y') if a in ult.index else ''
+    # quem jogou no último sábado da base (usado pelo botão "Repetir último sábado" e pelo exemplo inicial)
+    ld=alldays[-1]; na_linha=a in set(line[line.dia==ld].atleta); no_gol=a in set(df[(df.dia==ld)&df.is_gk].atleta)
+    if na_linha or no_gol:
+        e['l']=1
+        if no_gol and not na_linha: e['lg']=1
+        zc_hoje=bool(df[(df.dia==ld)&(df.atleta==a)&~df.is_gk].zc.any()) if na_linha else False
+        if zc_hoje and c!='Z': e['dp']='Z'  # fez zagueiro no último sábado (marcado ZC)
     roster.append(e)
 # pairs: last 8 saturdays same-team
 pairs={}
 for (d,t),g in line[line.dia.isin(last8)].groupby(['dia','team']):
     for a,b in itertools.combinations(sorted(g.atleta),2):
         k=a+'|'+b; pairs[k]=pairs.get(k,0)+1
-meta={'ate':alldays[-1].strftime('%d/%m/%Y'),'sabados':int(len(alldays)),'validos':32,'noise':4.0,'off':{k:round(v,2) for k,v in off.items()},'r2':0.25}
-json.dump({'roster':roster,'pairs':pairs,'meta':meta},open('../dados/data_modelo.json','w'),ensure_ascii=False)
+# duplas que jogaram juntas em >=2 sábados válidos: [n, média de pontos do time nesses dias]
+from model import valid_days, td, roster as R_, players as PL
+tp={}
+for d in valid_days:
+    for tm in ['Branco','Azul','Preto']:
+        pts=float(td[(td.dia==d)&(td.team==tm)].pts.iloc[0])
+        for a,b in itertools.combinations(sorted(PL[i] for i in R_.get((d,tm),[])),2):
+            tp.setdefault(a+'|'+b,[]).append(pts)
+pairstat={k:[len(v),round(sum(v)/len(v),1)] for k,v in tp.items() if len(v)>=2}
+avg=float(td[td.dia.isin(valid_days)].pts.mean())
+r2=float(M0.lodo(lam=6,lam_b=200)[0])
+meta={'ate':alldays[-1].strftime('%d/%m/%Y'),'sabados':int(len(alldays)),'validos':len(valid_days),'noise':4.0,'off':{k:round(v,2) for k,v in off.items()},'r2':round(r2,2),'avgPts':round(avg,1)}
+json.dump({'roster':roster,'pairs':pairs,'pairstat':pairstat,'meta':meta},open('../dados/data_modelo.json','w'),ensure_ascii=False)
 print(len(roster),len(pairs),meta)
 print(pd.DataFrame(roster).sort_values('rec',ascending=False).head(30)[['n','p','r','s','d','gr','rec']].to_string())

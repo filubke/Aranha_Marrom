@@ -35,8 +35,10 @@ def design(days,X=None):
         M=np.zeros((3,P))
         for k,t in enumerate(TEAMS):
             for i in roster.get((d,t),[]): M[k,i]=1
-        M=M-M.mean(0)  # center across teams
-        pts=sub.loc[TEAMS,'pts'].values; gf=sub.loc[TEAMS,'GF'].values
+        # times desfalcados (menos atletas que o normal do dia) jogam em desvantagem: ficam fora do treino e da avaliação
+        n=M.sum(1); keep=np.where(n==np.bincount(n.astype(int)).argmax())[0]
+        M=M[keep]; M=M-M.mean(0)  # center across teams
+        pts=sub.loc[TEAMS,'pts'].values[keep]; gf=sub.loc[TEAMS,'GF'].values[keep]
         rows.append(M); y.append(pts-pts.mean()); yg.append(gf-gf.mean())
     return np.vstack(rows),np.concatenate(y),np.concatenate(yg)
 def fit(train_days,lam=20,lam_b=5,use_feat=True,use_u=True,alpha=0.0,w=None):

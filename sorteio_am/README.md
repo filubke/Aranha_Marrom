@@ -35,10 +35,10 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 ## Atualizar com novos sábados (teste primeiro, treino depois)
 
 1. Lance o sábado na planilha e exporte para `dados/bola_de_ouro_2026_export.txt` (ou peça ao Claude para atualizar a base).
-2. **Teste prospectivo** (o de verdade): em `modelo/`, `python avaliar_novos.py`. O modelo congelado em `dados/data.json` (treinado até a data `meta.ate`) prevê os sábados posteriores a essa data, usando a escalação real da planilha, e o resultado vai para `dados/historico_previsoes.csv`.
+2. **Teste prospectivo** (o de verdade): em `modelo/`, `python avaliar_novos.py`. Cada sábado novo recebe um status: `ok` (9 jogos e times completos, entra nas métricas), `faltante` (time com menos atletas: só se compara a diferença entre os times completos) ou `jogos_incompletos` (menos de 9 jogos registrados: fica só registrado). O modelo congelado em `dados/data.json` (treinado até a data `meta.ate`) prevê os sábados posteriores a essa data, usando a escalação real da planilha, e o resultado vai para `dados/historico_previsoes.csv`.
 3. **Teste retroativo:** `python avaliar_sabados.py 8`. Para cada um dos últimos 8 sábados o modelo é treinado só com o que veio antes. Grava uma linha em `dados/historico_modelo.csv`, identificada pela coluna `base_ate` (data do último sábado da base usada).
-4. **Treino:** `python load.py && python final_fit.py && python gk.py && python pairs.py && python export.py` (gera `dados/data_modelo.json`).
-5. Copie `roster` e `meta` para `dados/data.json`, mantendo `pairstat` e `rules`. A data `meta.ate` passa a ser a do último sábado novo.
+4. **Treino:** em `modelo/`: `python final_fit.py && python gk.py && python export.py` (gera `dados/data_modelo.json`; `pairs.py` é só análise das duplas). Posições de atletas novos: rode `classify.py` e `final.py` e junte só os nomes novos ao `posicoes_propostas.csv` (as posições já aceitas não mudam).
+5. Copie `roster`, `pairs`, `pairstat` e `meta` de `data_modelo.json` para `dados/data.json`, mantendo `rules` e `rulesVer`. A data `meta.ate` passa a ser a do último sábado novo.
 6. Em `app/`: `python build.py` e faça commit de `index.html`.
 
 Ordem importa: o passo 2 tem de rodar **antes** do treino (passos 4 e 5), senão o modelo já viu os sábados novos.
@@ -48,3 +48,7 @@ Resultado do teste em 29/10/2026 (últimos 8 sábados): R² fora da amostra 0,21
 Sugestão: registrar na planilha se o sorteio foi aleatório, manual ou pelo app, para o modelo não aprender o gosto de quem montou os times.
 
 Requisitos: Python 3 com pandas e numpy.
+
+## Times desfalcados (faltante)
+
+Um time com menos atletas que os outros joga em desvantagem em todos os jogos, e isso não é qualidade dos atletas. Por isso o treino (`model.py`, função `design`) ignora, em cada sábado, os times com tamanho diferente do usual. Nos testes retroativos isso subiu o R² dos times completos de 0,31 para 0,33. Os sábados com faltante continuam servindo para os outros dois times e para o histórico de duplas.
