@@ -32,13 +32,16 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 3. Ordena e sorteia **uniformemente** entre os q % melhores (padrão 10 %). Esse é o controle entre equilíbrio e aleatoriedade.
 4. Previsão: força por time (pts relativos à média de 8,4), chance de ganhar o dia por simulação e pontos esperados. Recalculada a cada troca de atleta.
 
-## Atualizar com novos sábados
+## Atualizar com novos sábados (teste primeiro, treino depois)
 
-1. Exporte a planilha para `dados/bola_de_ouro_2026_export.txt`.
-2. Em `modelo/`: `python load.py && python final_fit.py && python gk.py && python pairs.py && python export.py` (gera `dados/data_modelo.json`).
-3. Copie os campos `roster` e `meta` para `dados/data.json` (mantendo `pairstat` e `rules`).
-4. Em `app/`: `python build.py` e faça commit de `index.html`.
+1. Lance o sábado na planilha e exporte para `dados/bola_de_ouro_2026_export.txt` (ou peça ao Claude para atualizar a base).
+2. **Teste:** em `modelo/`, `python avaliar_sabados.py 8`. Para cada um dos últimos 8 sábados o modelo é treinado só com o que veio antes e prevê a força de cada time. O script compara com os pontos reais (erro médio, R², se acertou o time campeão). O sábado novo é o último da lista.
+3. **Treino:** `python load.py && python final_fit.py && python gk.py && python pairs.py && python export.py` (gera `dados/data_modelo.json`).
+4. Copie `roster` e `meta` para `dados/data.json`, mantendo `pairstat` e `rules`.
+5. Em `app/`: `python build.py` e faça commit de `index.html`.
 
-Antes de re-treinar, compare a previsão do modelo com o resultado de cada sábado novo (teste fora da amostra). Sugestão: registrar na planilha se o sorteio foi aleatório, manual ou pelo app.
+Resultado do teste em 29/10/2026 (últimos 8 sábados): R² fora da amostra 0,21, correlação 0,46, erro médio 2,8 pts contra 3,3 pts de "todos iguais", campeão acertado em 5 de 8 (acaso = 1 em 3).
 
-Requisitos: Python 3 com pandas, numpy.
+Sugestão: registrar na planilha se o sorteio foi aleatório, manual ou pelo app, para o modelo não aprender o gosto de quem montou os times.
+
+Requisitos: Python 3 com pandas e numpy.

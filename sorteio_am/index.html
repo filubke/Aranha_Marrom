@@ -20,7 +20,7 @@
   --branco-bg:#efe6d6; --branco-fg:#241309; --branco-line:#b9a78d;
   --azul-bg:#6d94ff; --azul-fg:#04102b;
   --marrom-bg:#9c4527; --marrom-fg:#ffffff;
-  --verde-bg:#4fae6d; --verde-fg:#04170b;
+  --amarelo-bg:#e6c447; --amarelo-fg:#2a1d00;
   --display:'Fraunces',Georgia,serif;
   --body:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
   color-scheme:dark;
@@ -114,7 +114,7 @@ th{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .team.branco header{background:var(--branco-bg);color:var(--branco-fg);border-bottom:1px solid var(--branco-line)}
 .team.azul header{background:var(--azul-bg);color:var(--azul-fg)}
 .team.marrom header{background:var(--marrom-bg);color:var(--marrom-fg)}
-.team.verde header{background:var(--verde-bg);color:var(--verde-fg)}
+.team.amarelo header{background:var(--amarelo-bg);color:var(--amarelo-fg)}
 .team header small{font-size:13px;opacity:.85;font-variant-numeric:tabular-nums}
 .plist{list-style:none;margin:0;padding:6px 0}
 .plist li{display:flex;align-items:center;gap:8px;padding:5px 12px;min-height:34px}
@@ -322,7 +322,7 @@ const DATA = {"roster": [{"n": "Maicon", "p": "A", "conf": "a", "obs": "", "r": 
 'use strict';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ALLCOLORS=[{k:'branco',n:'Branco',e:'⚪'},{k:'azul',n:'Azul',e:'🔵'},{k:'marrom',n:'Marrom',e:'🟤'},{k:'verde',n:'Verde',e:'🟢'}];
+const ALLCOLORS=[{k:'branco',n:'Branco',e:'⚪'},{k:'azul',n:'Azul',e:'🔵'},{k:'marrom',n:'Marrom',e:'🟤'},{k:'amarelo',n:'Amarelo',e:'🟡'}];
 let COLORS=ALLCOLORS.slice(0,3);
 function setNT(n){ n=[2,3,4].includes(+n)?+n:3; opts.nt=n; COLORS=ALLCOLORS.slice(0,n); }
 const POS=['Z','M','A'];
@@ -410,7 +410,7 @@ function vagasOk(){
   POS.forEach(g=>{ const s=vagas[g].reduce((a,b)=>a+b,0); if(s!==c[g]) errs.push(POSN[g]+': '+s+' vagas para '+c[g]+' atletas'); });
   return errs;
 }
-function renderNT(){ document.querySelectorAll('#ntSeg button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.nt===opts.nt))); const n=opts.nt; const h=$('#fmtHint'); if(h) h.textContent=n===3?'3 times de 6 · todos contra todos 3x · 9 jogos':n+' times · sorteio equilibrado entre '+n+' times'; }
+function renderNT(){ document.querySelectorAll('#ntSeg button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.nt===opts.nt))); const n=opts.nt; const h=$('#fmtHint'); if(h) h.textContent=n===3?'3 times de 6 · todos contra todos 3x · 9 jogos':n+' times · '+(n===4?'todos contra todos em 3 rodadas':'sorteio equilibrado'); }
 function renderVagas(){ renderNT();
   const c=counts(); const head=opts.shuffle?COLORS.map((x,i)=>'Time '+(i+1)):COLORS.map(x=>x.n);
   let h='<thead><tr><th>Posição</th>'+head.map(x=>'<th>'+x+'</th>').join('')+'<th>Total</th></tr></thead><tbody>';
@@ -470,7 +470,7 @@ function renderStatus(){
   let msg='<b>'+l+'</b> de linha · <b>'+g+'</b> goleiro'+(g===1?'':'s');
   let blocked=false;
   if(l<6){ msg+=' · <span style="color:var(--bad)">marque pelo menos 6 atletas de linha</span>'; blocked=true; }
-  else if(g>3){ msg+=' · <span style="color:var(--bad)">no máximo 3 goleiros</span>'; blocked=true; }
+  else if(g>4){ msg+=' · <span style="color:var(--bad)">no máximo 4 goleiros</span>'; blocked=true; }
   else if(errs.length){ msg+=' · <span style="color:var(--bad)">vagas não batem</span>'; blocked=true; }
   else msg+=' · <span style="color:var(--ok)">vagas ok</span>';
   $('#status').innerHTML=msg; $('#go').disabled=blocked;
@@ -517,6 +517,15 @@ function renderRules(){
 }
 
 /* ---------- sorteio ---------- */
+function mkFix(){ const p=[0,1,2,3]; for(let a=3;a>0;a--){ const b=RNG.int(a+1); const x=p[a]; p[a]=p[b]; p[b]=x; }
+  const R=[[[p[0],p[1]],[p[2],p[3]]],[[p[0],p[2]],[p[1],p[3]]],[[p[0],p[3]],[p[1],p[2]]]];
+  for(let a=2;a>0;a--){ const b=RNG.int(a+1); const x=R[a]; R[a]=R[b]; R[b]=x; }
+  return R.map(rd=>rd.map(m=>RNG.int(2)?m:[m[1],m[0]]).sort(()=>RNG.int(2)?1:-1)); }
+function fixLines(r){ const T=r.teams, n=T.length;
+  if(n===2) return ['Jogo: '+T[0].c.n+' × '+T[1].c.n];
+  if(n===4&&r.fix) return r.fix.map((rd,i)=>'Rodada '+(i+1)+': '+rd.map(m=>T[m[0]].c.n+' × '+T[m[1]].c.n).join('  e  '));
+  if(n===3&&r.first>=0){ const f=T.filter((_,i)=>i!==r.first); return ['1º jogo: '+f[0].c.n+' × '+f[1].c.n+' (empate: par ou ímpar)']; }
+  return []; }
 function permsOfN(n){ const out=[]; (function go(a,rest){ if(!rest.length){ out.push(a); return; } rest.forEach((x,i)=>go(a.concat(x),rest.filter((_,j)=>j!==i))); })([],[...Array(n).keys()]); return out; }
 function permsOf3(){ return permsOfN(3); }
 function sdN(a){ const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length); }
@@ -524,7 +533,7 @@ function sd3(a,b,c){ const m=(a+b+c)/3; return Math.sqrt(((a-m)*(a-m)+(b-m)*(b-m
 function draw(){
   const lp=lineList().sort((a,b)=>POS.indexOf(posOf(a))-POS.indexOf(posOf(b))); const L=lp.length;
   const gks=gkList();
-  if(vagasOk().length||L<6||gks.length>3) return null;
+  if(vagasOk().length||L<6||gks.length>4) return null;
   const NT=opts.nt;
   const groups={Z:[],M:[],A:[]}; lp.forEach((p,i)=>groups[posOf(p)].push(i));
   const gi={Z:0,M:1,A:2}; const posIdx=lp.map(p=>gi[posOf(p)]);
@@ -580,10 +589,10 @@ function draw(){
     gkInfo='Os dois goleiros se revezam. '+gks[x].n+' joga mais jogos com o '+COLORS[ex].n+'.'; }
   else if(ng>=1){ teams.forEach(t=>t.gk=gks.map(g=>g.n)); if(ng>=2) gkInfo='Os '+ng+' goleiros se revezam entre os '+NT+' times.'; }
   teams.forEach((t,ti)=>{ t.gkEff=gkEff[ti]; t.gkS2=gkS2[ti]; t.players.sort((a,b)=>POS.indexOf(a.pos)-POS.indexOf(b.pos)||a.n.localeCompare(b.n,'pt-BR')); });
-  const first=NT===3?RNG.int(3):-1; // cor que fica de fora do jogo 1 (só com 3 times)
+  const first=NT===3?RNG.int(3):-1; const fix=NT===4?mkFix():null; // cor que fica de fora do jogo 1 (só com 3 times)
   const sl=new Float32Array(valid); for(let i=0;i<valid;i++) sl[i]=loss[sorted[i]];
   const orig=teams.map(t=>t.players.map(p=>Object.assign({},p)));
-  return {teams,gkInfo,rank:100*(1-k/valid),meanL1,valid,q:opts.q,first,when:new Date(),sl,orig,optSnap:{pos:opts.pos,sig:opts.sig,rep:opts.rep},edited:false};
+  return {teams,gkInfo,rank:100*(1-k/valid),meanL1,valid,q:opts.q,first,fix,when:new Date(),sl,orig,optSnap:{pos:opts.pos,sig:opts.sig,rep:opts.rep},edited:false};
 }
 function lossOf(res){
   const o=res.optSnap||opts; const nT=res.teams.length; const Sp=[0,1,2].map(()=>new Array(nT).fill(0)); const has=[false,false,false];
@@ -656,6 +665,8 @@ function renderResult0(){
     return '<div class="bar"><span>'+t.c.n+'</span><i><u style="width:'+Math.round(t.win*100*2)+'%;max-width:100%;background:'+col+'"></u></i><span class="v">'+Math.round(t.win*100)+'% · '+(r.teams.length===3?ptsFmt(DATA.meta.avgPts+t.D)+' pts':(t.D>=0?'+':'−')+Math.abs(t.D).toFixed(1).replace('.',',')+' pts vs média')+'</span></div>';
   }).join('')+'</div>';
   if(first) h+='<div class="first"><span class="hint">1º jogo</span><strong>'+first[0].c.n+' × '+first[1].c.n+'</strong><span class="hint">empate: par ou ímpar</span><button type="button" id="reFirst" class="btn-ghost">Sortear outro</button></div>';
+  else if(r.teams.length===2) h+='<div class="first"><span class="hint">Jogo</span><strong>'+r.teams[0].c.n+' × '+r.teams[1].c.n+'</strong></div>';
+  else if(r.fix) h+='<div class="first" style="display:block"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:6px"><span class="hint">Todos contra todos (6 jogos, 3 rodadas)</span><button type="button" id="reFirst" class="btn-ghost">Sortear outra ordem</button></div>'+r.fix.map((rd,i)=>'<div style="margin:4px 0"><span class="hint">Rodada '+(i+1)+'</span> &nbsp; '+rd.map(m=>'<strong style="font-size:19px">'+r.teams[m[0]].c.n+' × '+r.teams[m[1]].c.n+'</strong>').join(' <span class="hint">e</span> ')+'</div>').join('')+'</div>';
   h+='<div class="actions"><button type="button" id="again" class="btn-primary">Sortear de novo</button><button type="button" id="copyTxt">Copiar texto</button><button type="button" id="mkImg">Gerar imagem</button>'+(r.edited?'<button type="button" id="undoEdits">Voltar ao sorteio original</button>':'')+'</div>';
   h+='<div id="imgOut"></div>';
   h+='<div class="note">Força em pontos por sábado, relativa à média. O ruído de um sábado é de cerca de ±'+NOISE.toFixed(0)+' pontos por time, então o resultado do dia continua aberto.</div>';
@@ -666,7 +677,7 @@ function textOut(){
   const first=r.first>=0?r.teams.filter((_,i)=>i!==r.first):null;
   let s='Sorteio Aranha Marrom · '+d.toLocaleDateString('pt-BR')+'\n';
   r.teams.forEach(t=>{ s+='\n'+t.c.e+' '+t.c.n.toUpperCase()+'\n'; t.players.forEach(p=>s+='• '+p.n+' ('+p.pos+')\n'); if(t.gk.length) s+='🧤 '+t.gk.join(' / ')+'\n'; });
-  if(first) s+='\n1º jogo: '+first[0].c.n+' × '+first[1].c.n+' (empate: par ou ímpar)';
+  const fl=fixLines(r); if(fl.length) s+='\n'+fl.join('\n');
   return s;
 }
 function flash(btn,txt){ const o=btn.textContent; btn.textContent=txt; setTimeout(()=>{btn.textContent=o;},1600); }
@@ -677,7 +688,7 @@ function copyText(txt,btn){
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function makeImage(){
   const r=result; const W=1200; const pad=40; const nT=r.teams.length; const colW=(W-pad*2-20*(nT-1))/nT; const rows=Math.max(...r.teams.map(t=>t.players.length));
-  const H=pad+120+60+rows*44+110+60; const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  const fl=fixLines(r); const H=pad+120+60+rows*44+110+60+Math.max(0,fl.length-1)*38; const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
   const fg=cssVar('--fg')||'#13201a', bg=cssVar('--bg')||'#eef2f0', surf=cssVar('--surface')||'#fff', mut=cssVar('--muted')||'#56675f', line=cssVar('--line')||'#ccc';
   const disp="'Fraunces',Georgia,serif", body="'IBM Plex Sans',system-ui,sans-serif";
   x.fillStyle=bg; x.fillRect(0,0,W,H);
@@ -694,8 +705,8 @@ function makeImage(){
     x.fillStyle=mut; x.font='700 18px '+body; x.fillText('G',cx+16,gy+14); x.fillStyle=fg; x.font='500 24px '+body;
     x.fillText(t.gk.map(g=>g.replace(' (joga mais)','')).join(' / '),cx+48,gy+14);
   });
-  if(first){ x.fillStyle=fg; x.font='700 28px '+body; x.fillText('1º jogo: '+first[0].c.n+' × '+first[1].c.n,pad,H-pad-8);
-  x.fillStyle=mut; x.font='400 20px '+body; x.textAlign='right'; x.fillText('empate: par ou ímpar',W-pad,H-pad-8); x.textAlign='left'; }
+  fl.forEach((ln,i)=>{ const y=H-pad-8-(fl.length-1-i)*38; x.fillStyle=fg; x.font='700 28px '+body; x.fillText(ln.replace(' (empate: par ou ímpar)',''),pad,y); });
+  if(r.teams.length===3&&r.first>=0){ x.fillStyle=mut; x.font='400 20px '+body; x.textAlign='right'; x.fillText('empate: par ou ímpar',W-pad,H-pad-8); x.textAlign='left'; }
   return cv;
 }
 function showImage(){
@@ -717,7 +728,7 @@ document.addEventListener('click',function(e){
   if(t.id==='again') return runDraw();
   if(t.id==='copyTxt') return copyText(textOut(),t);
   if(t.id==='mkImg') return showImage();
-  if(t.id==='reFirst'){ result.first=RNG.int(3); return renderResult(); }
+  if(t.id==='reFirst'){ if(result.teams.length===4) result.fix=mkFix(); else result.first=RNG.int(3); return renderResult(); }
   if(t.dataset.sw){ const [a,b]=t.dataset.sw.split(':').map(Number); swapping={t:a,p:b}; sel=null; return renderResult(); }
   if(t.dataset.swno){ swapping=null; return renderResult(); }
   if(t.dataset.swok){ const nm=$('#swSel').value; if(!nm) return; const np=byName(nm); const old=result.teams[swapping.t].players[swapping.p];
