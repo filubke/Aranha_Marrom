@@ -32,22 +32,32 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 3. Ordena e sorteia **uniformemente** entre os q % melhores (padrão 10 %). Esse é o controle entre equilíbrio e aleatoriedade.
 4. Previsão: força por time (pts relativos à média de 8,4), chance de ganhar o dia por simulação e pontos esperados. Recalculada a cada troca de atleta.
 
-## Atualizar com novos sábados (teste primeiro, treino depois)
+## Atualizar com novos sábados (um comando)
 
-1. Lance o sábado na planilha e exporte para `dados/bola_de_ouro_2026_export.txt` (ou peça ao Claude para atualizar a base).
-2. **Teste prospectivo** (o de verdade): em `modelo/`, `python avaliar_novos.py`. Cada sábado novo recebe um status: `ok` (9 jogos e times completos, entra nas métricas), `faltante` (time com menos atletas: só se compara a diferença entre os times completos) ou `jogos_incompletos` (menos de 9 jogos registrados: fica só registrado). O modelo congelado em `dados/data.json` (treinado até a data `meta.ate`) prevê os sábados posteriores a essa data, usando a escalação real da planilha, e o resultado vai para `dados/historico_previsoes.csv`.
-3. **Teste retroativo:** `python avaliar_sabados.py 8`. Para cada um dos últimos 8 sábados o modelo é treinado só com o que veio antes. Grava uma linha em `dados/historico_modelo.csv`, identificada pela coluna `base_ate` (data do último sábado da base usada).
-4. **Treino:** em `modelo/`: `python final_fit.py && python gk.py && python export.py` (gera `dados/data_modelo.json`; `pairs.py` é só análise das duplas). Posições de atletas novos: rode `classify.py` e `final.py` e junte só os nomes novos ao `posicoes_propostas.csv` (as posições já aceitas não mudam).
-5. Copie `roster`, `pairs`, `pairstat` e `meta` de `data_modelo.json` para `dados/data.json`, mantendo `rules` e `rulesVer`. A data `meta.ate` passa a ser a do último sábado novo.
-6. Em `app/`: `python build.py` e faça commit de `index.html`.
+1. Exporte a planilha "Bola de Ouro" do Google Sheets como `.xlsx` (todas as abas) ou peça ao Claude.
+2. Em `modelo/`: **`python atualizar.py caminho/da/planilha.xlsx`** (leva cerca de 15 segundos).
+3. Revise com `git diff --stat` e faça o commit de `sorteio_am/`.
 
-Ordem importa: o passo 2 tem de rodar **antes** do treino (passos 4 e 5), senão o modelo já viu os sábados novos.
+O comando faz, nesta ordem (o teste vem **antes** do retreino):
 
-Resultado do teste em 29/10/2026 (últimos 8 sábados): R² fora da amostra 0,21, correlação 0,46, erro médio 2,8 pts contra 3,3 pts de "todos iguais", campeão acertado em 5 de 8 (acaso = 1 em 3).
+| Passo | O que faz | Onde registra |
+|---|---|---|
+| 1 | Lê as abas 2026 e Jogos da planilha | `dados/bola_de_ouro_2026_export.txt`, `dados/jogos.csv` |
+| 2 | **Teste prospectivo**: o modelo antigo (`data.json`) prevê os sábados que vieram depois dele. Status: `ok`, `faltante` (time com menos atletas: só se compara os times completos), `jogos_incompletos` (menos de 9 jogos) | `dados/historico_previsoes.csv` |
+| 3 | Atletas novos recebem posição proposta (as já aceitas não mudam) | `dados/posicoes_propostas.csv` |
+| 4 | **Retreino** (`final_fit`, `gk`, `export`) e atualização do `data.json`, mantendo `rules` e `rulesVer` | `dados/data.json` |
+| 5 | Teste retroativo dos últimos 8 sábados | `dados/historico_modelo.csv` (coluna `base_ate`) |
+| 6 | **Aba Jogos**: força prevista x resultado de cada jogo e de cada confronto | `dados/jogos_confrontos.csv`, `dados/historico_jogos.csv` |
+| 7 | Reconstrói a página | `index.html` |
+
+Se algo falhar, os arquivos de `dados/` voltam ao estado anterior. O comando não faz commit nem publica. Rodar duas vezes com a mesma planilha não muda nada (o `data.json` sai idêntico).
+
+### Aba Jogos (confrontos)
+Para cada sábado com jogos, o modelo é treinado sem aquele sábado e a força de cada time é a soma dos ratings de quem jogou. Compara-se a diferença de força com o resultado de cada jogo e de cada confronto (cada dupla de times joga 3 vezes no sábado). Em 29/10/2026 (15 sábados, 133 jogos): nos jogos com times completos, o time mais forte ganhou 58 de 91 decididos (64%; por acaso seria 50%) e a correlação força x saldo de gols foi 0,26. Linha em branco de jogo na planilha (ex.: jogo 9 de 17/10) é ignorada e aparece como sábado com 8 jogos.
 
 Sugestão: registrar na planilha se o sorteio foi aleatório, manual ou pelo app, para o modelo não aprender o gosto de quem montou os times.
 
-Requisitos: Python 3 com pandas e numpy.
+Requisitos: Python 3 com pandas, numpy e openpyxl.
 
 ## Times desfalcados (faltante)
 
