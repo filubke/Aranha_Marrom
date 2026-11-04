@@ -840,3 +840,24 @@ Dia Agrupado,Dia,Time Agrupado,Time,Atleta,Gols,Assistências,Vitorias,Empates,A
 ,24/Oct/2026,Faltou,Faltou,Predador,0,0,0,0,-5,,,,,-5,,-5
 ,24/Oct/2026,Goleiro,Goleiro,William,0,0,4,1,2,,,,13,11,Goleiro,11
 ,24/Oct/2026,,Goleiro,Venilson,0,0,4,1,2,,,,13,11,Goleiro,11
+31/Oct/2026,31/Oct/2026,Preto,Preto,Eliel,0,0,4,1,2,,1,,,16,ZC,16
+,31/Oct/2026,,Preto,Gepeto,1,0,4,1,2,,1,,,17,ZC,16
+,31/Oct/2026,,Preto,Elton,2,3,4,1,2,,,,,20,,15
+,31/Oct/2026,,Preto,Predador,2,5,4,1,2,,,,,22,,15
+,31/Oct/2026,,Preto,Carioca,2,2,4,1,2,,,,,19,,15
+,31/Oct/2026,,Preto,Nuan,7,2,4,1,2,,,,,24,,15
+,31/Oct/2026,Branco,Branco,Mathias,0,0,2,1,2,,1,,,10,ZC,10
+,31/Oct/2026,,Branco,Venilson,0,0,2,1,2,,1,,,10,ZC,10
+,31/Oct/2026,,Branco,Berg,1,2,2,1,2,1,,,,10,,7
+,31/Oct/2026,,Branco,Alexandre,1,0,2,1,2,,,,,10,,9
+,31/Oct/2026,,Branco,Dioguinho,0,1,2,1,2,,,,,10,,9
+,31/Oct/2026,,Branco,Maicon,3,0,2,1,2,,,,,12,,9
+,31/Oct/2026,Azul,Azul,Felipe garcia,1,0,1,2,2,,1,,,9,ZC,8
+,31/Oct/2026,,Azul,Gk,0,2,1,2,2,,1,,,10,ZC,8
+,31/Oct/2026,,Azul,Fil,1,0,1,2,2,,,,,8,,7
+,31/Oct/2026,,Azul,Presidente Fernando,0,1,1,2,2,,,,,8,,7
+,31/Oct/2026,,Azul,Chico,2,1,1,2,2,,,,,10,,7
+,31/Oct/2026,,Azul,Adriano,2,0,1,2,2,,,,,9,,7
+,31/Oct/2026,Goleiro,Goleiro,William,0,0,1,2,2,,,,9,6,Goleiro,6
+,31/Oct/2026,,Goleiro,Andre,0,1,4,1,2,,,1,6,17,Goleiro,11
+,31/Oct/2026,,Goleiro,Iury,0,0,2,1,2,,,,10,7,Goleiro,7

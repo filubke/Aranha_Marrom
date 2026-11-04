@@ -133,3 +133,12 @@ data,jogo,time_a,gols_a,gols_b,time_b
 2026-10-24,7,Branco,0,2,Preto
 2026-10-24,8,Branco,0,1,Azul
 2026-10-24,9,Preto,2,0,Azul
+2026-10-31,1,Branco,1,0,Preto
+2026-10-31,2,Branco,0,1,Azul
+2026-10-31,3,Preto,2,1,Azul
+2026-10-31,4,Preto,5,1,Branco
+2026-10-31,5,Azul,1,2,Branco
+2026-10-31,6,Azul,1,2,Preto
+2026-10-31,7,Branco,0,2,Preto
+2026-10-31,8,Branco,1,1,Azul
+2026-10-31,9,Preto,2,2,Azul
