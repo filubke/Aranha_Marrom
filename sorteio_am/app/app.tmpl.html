@@ -682,7 +682,7 @@ function renderResult0(){
   if(first) h+='<div class="first"><span class="hint">1º jogo</span><strong>'+first[0].c.n+' × '+first[1].c.n+'</strong><span class="hint">empate: par ou ímpar</span><button type="button" id="reFirst" class="btn-ghost">Sortear outro</button></div>';
   else if(r.teams.length===2) h+='<div class="first"><span class="hint">Jogo</span><strong>'+r.teams[0].c.n+' × '+r.teams[1].c.n+'</strong></div>';
   else if(r.fix) h+='<div class="first" style="display:block"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:6px"><span class="hint">Todos contra todos (6 jogos, 3 rodadas)</span><button type="button" id="reFirst" class="btn-ghost">Sortear outra ordem</button></div>'+r.fix.map((rd,i)=>'<div style="margin:4px 0"><span class="hint">Rodada '+(i+1)+'</span> &nbsp; '+rd.map(m=>'<strong style="font-size:19px">'+r.teams[m[0]].c.n+' × '+r.teams[m[1]].c.n+'</strong>').join(' <span class="hint">e</span> ')+'</div>').join('')+'</div>';
-  h+='<div class="actions"><button type="button" id="again" class="btn-primary">Sortear de novo</button><button type="button" id="copyTxt">Copiar texto</button><button type="button" id="mkImg">Gerar imagem</button>'+(r.edited?'<button type="button" id="undoEdits">Voltar ao sorteio original</button>':'')+'</div>';
+  h+='<div class="actions"><button type="button" id="again" class="btn-primary">Sortear de novo</button><button type="button" id="copyTxt">Copiar texto</button><button type="button" id="toSumula">Enviar para a súmula</button><button type="button" id="mkImg">Gerar imagem</button><a id="sumLink" class="dl" href="../sumula/" hidden>Abrir a súmula</a>'+(r.edited?'<button type="button" id="undoEdits">Voltar ao sorteio original</button>':'')+'</div>';
   h+='<div id="imgOut"></div>';
   h+='<div class="note">Força em pontos por sábado, relativa à média. O ruído de um sábado é de cerca de ±'+NOISE.toFixed(0)+' pontos por time'+(std6(r)?'':' (medido em times de 6; em outro formato é só uma estimativa)')+', então o resultado do dia continua aberto.</div>';
   el.innerHTML=h;
@@ -694,6 +694,15 @@ function textOut(){
   r.teams.forEach(t=>{ s+='\n'+t.c.e+' '+t.c.n.toUpperCase()+'\n'; t.players.forEach(p=>s+='• '+p.n+' ('+p.pos+')\n'); if(t.gk.length) s+='🧤 '+t.gk.join(' / ')+'\n'; });
   const fl=fixLines(r); if(fl.length) s+='\n'+fl.join('\n');
   return s;
+}
+function sendSumula(btn){
+  const r=result; if(!r||r.example||!r.teams){ flash(btn,'Faça o sorteio antes'); return; }
+  const clean=n=>String(n).replace(/\s*\(joga mais\)\s*$/,''), cnt={}, pref={};
+  r.teams.forEach((t,ti)=>(t.gk||[]).forEach(g=>{ const n=clean(g); (cnt[n]=cnt[n]||[]).push(ti); if(/joga mais/.test(g)) pref[n]=ti; }));
+  const gkTeam={}; Object.keys(cnt).forEach(n=>{ gkTeam[n]=pref[n]!==undefined?pref[n]:(cnt[n].length===1?cnt[n][0]:null); });
+  const o={at:new Date().toISOString(),gkTeam:gkTeam,teams:r.teams.map(t=>({c:t.c.k,players:t.players.map(p=>({n:p.n,pos:p.pos})),gks:(t.gk||[]).map(clean)}))};
+  try{ localStorage.setItem('am-sorteio-atual',JSON.stringify(o)); flash(btn,'Enviado ✓'); const el=document.getElementById('sumLink'); if(el) el.hidden=false; }
+  catch(e){ flash(btn,'Não foi possível guardar'); }
 }
 function flash(btn,txt){ const o=btn.textContent; btn.textContent=txt; setTimeout(()=>{btn.textContent=o;},1600); }
 function copyText(txt,btn){
@@ -742,6 +751,7 @@ document.addEventListener('click',function(e){
   const t=e.target.closest('button'); if(!t) return;
   if(t.id==='again') return runDraw();
   if(t.id==='copyTxt') return copyText(textOut(),t);
+  if(t.id==='toSumula') return sendSumula(t);
   if(t.id==='mkImg') return showImage();
   if(t.id==='reFirst'){ if(result.teams.length===4) result.fix=mkFix(); else result.first=RNG.int(3); return renderResult(); }
   if(t.dataset.sw){ const [a,b]=t.dataset.sw.split(':').map(Number); swapping={t:a,p:b}; sel=null; return renderResult(); }
