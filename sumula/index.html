@@ -179,6 +179,9 @@ td.dot2 span{display:inline-block;width:10px;height:10px;border-radius:50%;margi
 .grp{margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ghd2.nc{background:var(--surface-2)}.ghd2{font-family:var(--display);font-weight:700;padding:6px 12px}.ghd2>span:first-child{flex:1}.hint2{font-size:13px;color:var(--muted);font-weight:500}
 .pos{display:inline-block;min-width:26px;padding:1px 5px;border-radius:6px;background:var(--surface-2);font-size:12px;font-weight:700}
+.foulb{width:100%;min-height:40px;margin-top:6px;background:#f5d000;color:#2a170c;border-color:#c9a800;font-weight:700}.foulb:disabled{opacity:.45}
+.fx{min-height:36px;min-width:36px;padding:0}
+.sech{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;padding:0;min-height:44px;color:var(--fg);text-align:left}.sech h2{margin:0}
 tr.sep td{background:var(--surface-2);font-family:var(--display);font-weight:700;text-align:left}
 .adj{display:grid;gap:8px;margin-top:8px}
 .adjr{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(2,auto);gap:6px 10px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px}
@@ -242,7 +245,8 @@ const rnd=n=>{const a=new Uint32Array(1); (window.crypto||{getRandomValues:x=>{x
 /* ---------- motor ---------- */
 const score=g=>{let a=0,b=0; g.goals.forEach(x=>x.s===0?a++:b++); return [a,b];};
 const pending=g=>g.goals.map((x,i)=>({x,i})).filter(o=>o.x.by===null||(o.x.by!=='*'&&o.x.as===null));
-function newGame(a,b){return {a,b,gk:[null,null],gkAuto:false,goals:[],done:false};}
+function newGame(a,b){return {a,b,gk:[null,null],gkAuto:false,goals:[],fouls:[],done:false};}
+const fl=g=>g.fouls||(g.fouls=[]);
 function setOrder(first,second){const n=S.teams.length; const rest=[]; for(let i=0;i<n;i++) if(i!==first&&i!==second) rest.push(i); S.order=[first,second].concat(rest);}
 function pairAt(i){
   const n=S.teams.length, o=S.order||[0,1,2,3].slice(0,n);
@@ -283,18 +287,20 @@ function teamTable(){
 }
 const posOf=n=>{ for(const tm of S.teams){ const p=tm.players.find(q=>q.n===n); if(p) return p.pos||(p.zc?'Z':(BYN[norm(n)]||{}).p||''); } return (BYN[norm(n)]||{}).p||''; };
 const ex=n=>Object.assign({assid:2,falta:0,bonus:0},S.extras[n]||{});
+function foulStats(){const m={}; S.games.forEach(g=>{ if(!g.done) return; fl(g).forEach(f=>{m[f.by]=(m[f.by]||0)+1;}); }); return m;}
+function champs(){const R=teamTable(); const all=S.games.length>0&&S.games.every(g=>g.done); return R.map(r=>all&&r.gp>0&&r.d===0&&r.e===0);}
 function compute(){
-  const R=teamTable(), st=goalStats(), rows=[];
+  const R=teamTable(), st=goalStats(), fs=foulStats(), ch=champs(), rows=[];
   S.teams.forEach((t,i)=>{
     const sorted=t.players.slice().sort((p,q)=>(q.zc?1:0)-(p.zc?1:0));
     sorted.forEach(p=>{const x=ex(p.n),s=st[p.n]||{g:0,a:0};
-      rows.push({team:i,time:TK[t.c].sheet,nome:p.n,gols:s.g,ass:s.a,vit:R[i].v,emp:R[i].e,assid:x.assid,falta:x.falta,zsg:p.zc?R[i].cs:null,bonus:x.bonus,gs:null,pos:p.zc?'ZC':'',pp:p.pos||(p.zc?'Z':(BYN[norm(p.n)]||{}).p||''),gk:false});});
+      rows.push({team:i,time:TK[t.c].sheet,nome:p.n,gols:s.g,ass:s.a,vit:R[i].v,emp:R[i].e,assid:x.assid,falta:(fs[p.n]||0)+x.falta,zsg:p.zc?R[i].cs:null,bonus:ch[i]?1:0,gs:null,pos:p.zc?'ZC':'',pp:p.pos||(p.zc?'Z':(BYN[norm(p.n)]||{}).p||''),gk:false});});
   });
   S.gks.forEach(k=>{
     let v=0,e=0,gs=0,gp=0;
     S.games.forEach(g=>{ if(!g.done) return; [0,1].forEach(s=>{ if(g.gk[s]!==k.n) return; const sc=score(g); const f=sc[s],c=sc[1-s]; gp++; gs+=c; if(f>c)v++; else if(f===c)e++; }); });
     const x=ex(k.n),s=st[k.n]||{g:0,a:0};
-    if(gp||s.g||s.a) rows.push({team:-1,time:'Goleiro',nome:k.n,gols:s.g,ass:s.a,vit:v,emp:e,assid:x.assid,falta:x.falta,zsg:null,bonus:x.bonus,gs:gs,pos:'Goleiro',pp:'G',gk:true,jogos:gp});
+    if(gp||s.g||s.a) rows.push({team:-1,time:'Goleiro',nome:k.n,gols:s.g,ass:s.a,vit:v,emp:e,assid:x.assid,falta:(fs[k.n]||0)+x.falta,zsg:null,bonus:0,gs:gs,pos:'Goleiro',pp:'G',gk:true,jogos:gp});
   });
   S.absent.forEach(n=>{rows.push({team:-2,time:'Faltou',nome:n,gols:0,ass:0,vit:0,emp:0,assid:-5,falta:0,bonus:0,zsg:null,gs:null,pos:'',pp:(BYN[norm(n)]||{}).p||'',gk:false,ausente:true});});
   rows.forEach(r=>{const w=r.gk?2:3; r.total=r.vit*w+r.gols+r.ass+r.emp+r.assid-r.falta*2+(r.zsg||0)+r.bonus*5; r.base=r.vit*w+r.emp+r.assid+(r.zsg||0)-r.falta*2;});
@@ -314,7 +320,8 @@ function buildPayload(){
   S.games.forEach((g,i)=>{ if(!g.done) return; const [a,b]=score(g); const A=TK[S.teams[g.a].c].sheet,B=TK[S.teams[g.b].c].sheet;
     jogos.push({n:i+1,timeA:A,golsA:a,golsB:b,timeB:B});
     gks.push({n:i+1,timeA:A,gkA:g.gk[0]||'',timeB:B,gkB:g.gk[1]||''});
-    let pa=0,pb=0; g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; lances.push({jogo:i+1,ordem:k+1,time:x.s===0?A:B,autor:x.by==='*'?'':x.by,assist:x.as||'',placar:pa+'-'+pb}); }); });
+    let pa=0,pb=0; g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; lances.push({jogo:i+1,ordem:k+1,time:x.s===0?A:B,autor:x.by==='*'?'':x.by,assist:x.as||'',placar:pa+'-'+pb,tipo:'Gol'}); });
+    fl(g).forEach((f,k)=>{ lances.push({jogo:i+1,ordem:g.goals.length+k+1,time:f.s===0?A:B,autor:f.by,assist:'',placar:pa+'-'+pb,tipo:'Falta dura'}); }); });
   return {action:'append',date:S.date,jogos:jogos,atletas:rows.map(r=>({time:r.time,nome:r.nome,gols:r.gols,ass:r.ass,vit:r.vit,emp:r.emp,assid:r.assid,falta:r.falta,bonus:r.bonus,gs:r.gs,pos:r.pos,ausente:!!r.ausente})),lances:lances,goleiros:gks,app:'sumula-am-1'};
 }
 /* leitura do texto do sorteio ("Copiar texto") */
@@ -438,7 +445,7 @@ function sideHTML(g,s){
   const ti=s?g.b:g.a,t=S.teams[ti],T0=TK[t.c],sc=score(g)[s];
   return '<div class="side"><div class="sh c-'+t.c+'">'+T0.e+' '+T0.n+'</div><div class="sc" aria-label="Gols do '+T0.n+'">'+sc+'</div>'+
     '<button class="gol" data-act="gol" data-s="'+s+'"'+(g.done?' disabled':'')+'>+ GOL</button>'+
-    '<div class="sub"><button class="minus" data-act="gmin" data-s="'+s+'" aria-label="Tirar um gol do '+T0.n+'"'+(g.done||!sc?' disabled':'')+'>−</button><button class="gkb" data-act="gkpick" data-s="'+s+'"'+(g.done?' disabled':'')+'>🧤 '+esc(g.gk[s]||'definir')+'</button></div></div>';
+    '<div class="sub"><button class="minus" data-act="gmin" data-s="'+s+'" aria-label="Tirar um gol do '+T0.n+'"'+(g.done||!sc?' disabled':'')+'>−</button><button class="gkb" data-act="gkpick" data-s="'+s+'"'+(g.done?' disabled':'')+'>🧤 '+esc(g.gk[s]||'definir')+'</button></div><button class="foulb" data-act="foul" data-s="'+s+'"'+(g.done?' disabled':'')+'>🟨 Falta dura</button></div>';
 }
 function evText(g,x){
   const who=x.by===null?'Quem fez o gol?':x.by==='*'?'Gol contra / sem autor':x.by;
@@ -460,6 +467,7 @@ function viewJogo(){
     h+='<div class="log">'+g.goals.map((x,k)=>{ x.s===0?pa++:pb++; const e=evText(g,x),pe=x.by===null||(x.by!=='*'&&x.as===null);
       return '<button class="ev'+(pe?' pend':'')+'" data-act="evedit" data-k="'+k+'"'+(g.done?' disabled':'')+'><span class="sc2">'+pa+'–'+pb+'</span><span class="dot u-'+S.teams[x.s?g.b:g.a].c+'"></span><span class="tx">⚽ '+esc(e.who)+(e.as?'<small>'+esc(e.as)+'</small>':'')+'</span></button>';}).join('')+'</div>';
   } else h+='<p class="hint" style="margin-bottom:14px">Sem gols ainda. Toque em “+ GOL” no time que marcou.</p>';
+  if(fl(g).length) h+='<div class="log fouls">'+fl(g).map((f,k)=>'<div class="ev"><span class="sc2">🟨</span><span class="dot u-'+S.teams[f.s?g.b:g.a].c+'"></span><span class="tx">Falta dura: '+esc(f.by)+'<small>−2 pontos</small></span><button class="fx" data-act="fouldel" data-k="'+k+'" aria-label="Remover falta de '+esc(f.by)+'"'+(g.done?' disabled':'')+'>×</button></div>').join('')+'</div>';
   h+='<div class="card"><details><summary>Opções do jogo</summary><div class="row" style="margin:6px 0">'+
     (!g.goals.length&&!g.done?'<button data-act="pair">Trocar os times deste jogo</button>':'')+
     (S.cur===0&&S.teams.length===3&&!g.goals.length&&!g.done?'<button data-act="redraw">🎲 Sortear 1º jogo de novo</button>':'')+
@@ -485,19 +493,22 @@ function viewResumo(){
   h+='<div class="card"><h2>Tabela do dia</h2><div class="tbl"><table><tr><th>Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th></tr>'+order.map(i=>{const r=R[i];return '<tr><td class="dot2"><span class="u-'+S.teams[i].c+'"></span>'+TK[S.teams[i].c].n+'</td><td>'+r.gp+'</td><td>'+r.v+'</td><td>'+r.e+'</td><td>'+r.d+'</td><td>'+r.gf+'</td><td>'+r.gc+'</td><td>'+(r.gf-r.gc)+'</td><td><b>'+(r.v*3+r.e)+'</b></td></tr>';}).join('')+'</table></div></div>';
   /* jogos do dia */
   const PL={A:'Ata',M:'Mei',Z:'Zag',G:'Gol'};
-  const gh='<div class="card"><div class="chead"><h2>Jogos do dia</h2><div class="row"><button class="mini" data-act="gall" data-v="1">Abrir todos</button><button class="mini" data-act="gall" data-v="0">Fechar todos</button></div></div>';
-  h+=gh+S.games.map((g,i)=>{ const sc=score(g), A=T(g.a), B=T(g.b), op=!!ui.og[i];
+  const sgo=!ui.closed.sg;
+  const gh='<div class="card"><button class="sech" data-act="tgrp" data-k="sg" aria-expanded="'+sgo+'"><h2>Jogos do dia</h2><i class="car">'+(sgo?'▾':'▸')+'</i></button>'+(sgo?'<div class="row" style="margin:4px 0"><button class="mini" data-act="gall" data-v="1">Abrir todos</button><button class="mini" data-act="gall" data-v="0">Fechar todos</button></div>':'');
+  h+=gh+(!sgo?'':S.games.map((g,i)=>{ const sc=score(g), A=T(g.a), B=T(g.b), op=!!ui.og[i];
     let d='';
-    if(op){ let pa=0,pb=0; d='<div class="gdet">'+(g.goals.length?g.goals.map(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); return '<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span class="dot u-'+S.teams[x.s?g.b:g.a].c+'"></span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'?' <small>'+esc(e.as)+'</small>':'')+'</span></div>';}).join(''):'<div class="hint">Sem gols.</div>')+'<div class="hint" style="margin-top:6px">🧤 '+esc(g.gk[0]||'—')+' × '+esc(g.gk[1]||'—')+'</div></div>'; }
-    return '<div class="gsum'+(g.done?'':' todo')+'"><button class="ghd" data-act="tgame" data-i="'+i+'" aria-expanded="'+op+'"><b>'+(i+1)+'</b><span class="gt"><u class="u-'+S.teams[g.a].c+'"></u>'+A.n+'</span><span class="gs">'+(g.done||g.goals.length?sc[0]+' × '+sc[1]:'–')+'</span><span class="gt r">'+B.n+'<u class="u-'+S.teams[g.b].c+'"></u></span><i class="car">'+(op?'▾':'▸')+'</i></button>'+(g.done?'':'<div class="hint pad">'+(i===S.cur&&g.goals.length?'em andamento':'ainda não encerrado')+'</div>')+d+'</div>'; }).join('')+'</div>';
+    if(op){ let pa=0,pb=0; d='<div class="gdet">'+(g.goals.length?g.goals.map(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); return '<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span class="dot u-'+S.teams[x.s?g.b:g.a].c+'"></span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'?' <small>'+esc(e.as)+'</small>':'')+'</span></div>';}).join(''):'<div class="hint">Sem gols.</div>')+fl(g).map(f=>'<div class="gl"><span class="sc2">🟨</span><span class="dot u-'+S.teams[f.s?g.b:g.a].c+'"></span><span>Falta dura: '+esc(f.by)+'</span></div>').join('')+'<div class="hint" style="margin-top:6px">🧤 '+esc(g.gk[0]||'—')+' × '+esc(g.gk[1]||'—')+'</div></div>'; }
+    return '<div class="gsum'+(g.done?'':' todo')+'"><button class="ghd" data-act="tgame" data-i="'+i+'" aria-expanded="'+op+'"><b>'+(i+1)+'</b><span class="gt"><u class="u-'+S.teams[g.a].c+'"></u>'+A.n+'</span><span class="gs">'+(g.done||g.goals.length?sc[0]+' × '+sc[1]:'–')+'</span><span class="gt r">'+B.n+'<u class="u-'+S.teams[g.b].c+'"></u></span><i class="car">'+(op?'▾':'▸')+'</i></button>'+(g.done?'':'<div class="hint pad">'+(i===S.cur&&g.goals.length?'em andamento':'ainda não encerrado')+'</div>')+d+'</div>'; }).join(''))+'</div>';
   /* atletas por time */
   const groups=[]; rows.forEach(r=>{ const k=r.ausente?'abs':r.gk?'gk':'t'+r.team; let G=groups[groups.length-1]; if(!G||G.k!==k){G={k:k,r:[],title:r.ausente?'🚫 Faltou':r.gk?'🧤 Goleiros':TK[S.teams[r.team].c].e+' '+TK[S.teams[r.team].c].n,tc:r.team>=0?S.teams[r.team].c:''}; groups.push(G);} G.r.push(r); });
-  h+='<div class="card"><div class="chead"><h2>Pontos dos atletas</h2><div class="row"><button class="mini" data-act="call" data-v="1">Abrir todos</button><button class="mini" data-act="call" data-v="0">Fechar todos</button></div></div><p class="hint">Mesma conta da planilha: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença, jogo sem sofrer gol (ZC), bônus 5, falta dura −2.</p>';
-  h+=groups.map(G=>{ const op=!ui.closed[G.k], sum=G.r.reduce((s,r)=>s+r.total,0);
-    return '<div class="grp"><button class="ghd2'+(G.tc?' c-'+G.tc:' nc')+'" data-act="tgrp" data-k="'+G.k+'" aria-expanded="'+op+'"><span>'+G.title+'</span><span class="hint2">'+G.r.length+' · '+sum+' pts</span><i class="car">'+(op?'▾':'▸')+'</i></button>'+
+  const spo=!ui.closed.sp, chs=champs();
+  h+='<div class="card"><button class="sech" data-act="tgrp" data-k="sp" aria-expanded="'+spo+'"><h2>Pontos dos atletas</h2><i class="car">'+(spo?'▾':'▸')+'</i></button>';
+  if(spo) h+='<div class="row" style="margin:4px 0"><button class="mini" data-act="call" data-v="1">Abrir todos</button><button class="mini" data-act="call" data-v="0">Fechar todos</button></div><p class="hint">Mesma conta da planilha: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença, jogo sem sofrer gol (ZC), falta dura −2. Bônus de 5 pontos para o time que ganhou todos os jogos (entra quando todos os jogos terminam).</p>';
+  if(spo) h+=groups.map(G=>{ const op=!ui.closed[G.k];
+    return '<div class="grp"><button class="ghd2'+(G.tc?' c-'+G.tc:' nc')+'" data-act="tgrp" data-k="'+G.k+'" aria-expanded="'+op+'"><span>'+G.title+'</span><span class="hint2">'+G.r.length+(G.r.length>1?' atletas':' atleta')+(G.tc&&chs[S.teams.findIndex(u=>u.c===G.tc)]?' · 🏆 bônus':'')+'</span><i class="car">'+(op?'▾':'▸')+'</i></button>'+
       (op?'<div class="tbl"><table><tr><th>Atleta</th><th>Pos</th><th>Total</th><th>G</th><th>A</th><th>V</th><th>E</th><th>SG</th><th>GS</th></tr>'+G.r.map(r=>'<tr><td>'+esc(r.nome)+'</td><td>'+(r.pp?'<span class="pos p-'+r.pp+'">'+r.pp+'</span>':'–')+'</td><td><b>'+r.total+'</b></td><td>'+r.gols+'</td><td>'+r.ass+'</td><td>'+r.vit+'</td><td>'+r.emp+'</td><td>'+(r.zsg===null?'–':r.zsg)+'</td><td>'+(r.gs===null?'–':r.gs)+'</td></tr>').join('')+'</table></div>':'')+'</div>'; }).join('');
-  h+='<p class="hint" style="margin-top:8px">Pos: A atacante · M meio · Z zagueiro · G goleiro. SG = jogos sem sofrer gol (só zagueiros ZC). GS = gols sofridos (só goleiros).</p>';
-  h+='<details style="margin-top:8px"><summary>Ajustes manuais (falta dura, bônus)</summary><p class="hint">Presença: 2 pontos, 1 se atrasou, −5 se faltou. Atraso e falta são marcados na aba Times.</p><div class="adj">'+rows.filter(r=>!r.ausente).map(r=>{const x=ex(r.nome);const st=(k,l)=>'<div class="step">'+l+'<div><button data-act="adj" data-n="'+esc(r.nome)+'" data-f="'+k+'" data-d="-1" aria-label="'+l+' menos, '+esc(r.nome)+'">−</button><output>'+x[k]+'</output><button data-act="adj" data-n="'+esc(r.nome)+'" data-f="'+k+'" data-d="1" aria-label="'+l+' mais, '+esc(r.nome)+'">+</button></div></div>';return '<div class="adjr"><b>'+esc(r.nome)+'</b>'+st('falta','Falta dura')+st('bonus','Bônus')+'</div>';}).join('')+'</div></details></div>';
+  if(spo) h+='<p class="hint" style="margin-top:8px">Pos: A atacante · M meio · Z zagueiro · G goleiro. SG = jogos sem sofrer gol (só zagueiros ZC). GS = gols sofridos (só goleiros).</p>';
+  h+='</div>';
   /* envio */
   const ready=!pr.warn.length&&!pr.bad.length&&doneN>0;
   h+='<div class="card"><h2>Enviar para a planilha</h2>';
@@ -525,6 +536,9 @@ function renderSheet(){
       const cand=pl.filter(n=>n!==x.by);
       body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
     }
+  } else if(sh.type==='foul'){
+    const g=S.games[S.cur], T0=TK[S.teams[sh.s?g.b:g.a].c];
+    body='<h2>🟨 Falta dura do '+T0.n+'</h2><div class="sub">Quem cometeu a falta? Vale −2 pontos para o atleta.</div><div class="pgrid">'+sidePlayers(g,sh.s).map(n=>'<button data-act="foulpick" data-n="'+esc(n)+'">'+esc(n)+(fl(g).some(f=>f.by===n)?'<small>🟨 já tem falta neste jogo</small>':'')+'</button>').join('')+'</div><div class="foot"><button data-act="close">Cancelar</button></div>';
   } else if(sh.type==='pend'){
     const g=S.games[S.cur], p=pending(g);
     body='<h2>Faltam definir '+p.length+' gol'+(p.length>1?'s':'')+'</h2><div class="sub">A súmula só avança quando cada gol tem autor e assistência (ou “sem assistência”).</div><div class="pgrid">'+p.map(o=>'<button data-act="evedit" data-k="'+o.i+'">Gol '+(o.i+1)+' · '+TK[S.teams[o.x.s?g.b:g.a].c].n+'</button>').join('')+'</div><div class="foot"><button data-act="close">Voltar</button><button data-act="noauthor">Deixar todos sem autor e encerrar</button></div>';
@@ -641,6 +655,9 @@ document.addEventListener('click',function(e){
   const a=b.dataset.act, d=b.dataset;
   if(a==='scrim'){ if(e.target===b) closeSheet(); return; }
   switch(a){
+    case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s}; render(); } break;
+    case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push({s:s,by:d.n}); ui.sheet=null; }); break; }
+    case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
     case 'tgame': ui.og[d.i]=!ui.og[d.i]; render(); break;
     case 'gall': S.games.forEach((g,i)=>{ui.og[i]=d.v==='1';}); render(); break;
     case 'tgrp': ui.closed[d.k]=!ui.closed[d.k]; render(); break;
