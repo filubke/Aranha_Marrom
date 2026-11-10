@@ -31,6 +31,7 @@ var CFG = {
   TAB_LANCES: 'Lances',
   TAB_GK: 'Goleiros_Jogo',
   TAB_ESTADO: '_SumulaEstado',
+  PDF_FOLDER_ID: '1rEAeqAb4Vnth6_UtXq9wA5TOA812o9_s',   // pasta "Sumulas" do Drive (pode ser trocada na propriedade PDF_FOLDER_ID)
   TZ: 'America/Sao_Paulo'
 };
 
@@ -62,22 +63,39 @@ function fail_(code, msg) {
 function handle_(req) {
   switch (req.action) {
     case 'ping':
-      var edit = true, why = '';
-      try { auth_(req); } catch (e) { edit = false; why = e.message; }
-      return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName(), edit: edit, why: why };
+      var edit = true, why = '', who0 = null;
+      try { who0 = auth_(req); } catch (e) { edit = false; why = e.message; }
+      return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName(), edit: edit, why: why, email: edit && who0 ? who0.email || '' : '' };
     case 'state_get':           // público: ver o jogo ao vivo não exige login
       return stateGetGas_(req);
-    case 'take':
+    case 'take':                // assumir exige login (ou chave); put/beat/release usam o tk devolvido pelo take
+      var who = auth_(req);
+      req.newTk = Utilities.getUuid();
+      return stateWriteGas_(req, who);
     case 'put':
     case 'beat':
     case 'release':
-      var who = auth_(req);
-      return stateWriteGas_(req, who);
+      return stateWriteGas_(req, null);
     case 'append':
-      auth_(req);
-      return append_(req);
+      var wa = auth_(req);
+      var ra = append_(req);
+      if (ra && ra.ok) log_(wa, 'Enviou para a planilha', req.date + ' · ' + (req.jogos || []).length + ' jogos');
+      return ra;
+    case 'pdf':
+      var wp = auth_(req);
+      var rp = pdf_(req);
+      if (rp && rp.ok) log_(wp, 'Salvou PDF', rp.name);
+      return rp;
   }
   fail_('ACAO', 'Ação desconhecida.');
+}
+
+/* ---------- registro de quem editou (aba visível "Log_Sumula") ---------- */
+function log_(who, evento, detalhe) {
+  try {
+    var sh = ensureTab_(SpreadsheetApp.getActiveSpreadsheet(), 'Log_Sumula', ['Quando', 'Quem', 'O que', 'Detalhe']);
+    sh.appendRow([new Date(), (who && who.email) || '(chave de acesso)', evento, detalhe || '']);
+  } catch (e) {}
 }
 
 /* ---------- acesso ---------- */
@@ -104,40 +122,42 @@ function auth_(req) {
 /* ---------- estado compartilhado (lógica pura, testável fora do Google) ---------- */
 // doc = { rev, holder: {id,name,at} | null, state | null }.  Só o "holder" escreve; assumir troca o holder.
 function emptyDoc_() { return { rev: 0, holder: null, state: null }; }
+function pub_(h) { return h ? { id: h.id, name: h.name, email: h.email || '', at: h.at } : null; }   // nunca expõe o tk
+function isHolder_(doc, req) { return !!(doc.holder && doc.holder.id === String(req.clientId) && doc.holder.tk && doc.holder.tk === String(req.tk || '')); }
 
 function stateView_(doc, since, now) {
-  var r = { ok: true, rev: doc.rev, holder: doc.holder, now: now };
+  var r = { ok: true, rev: doc.rev, holder: pub_(doc.holder), now: now };
   if (since !== undefined && since !== null && Number(since) === doc.rev) r.unchanged = true;
   else r.state = doc.state;
   return r;
 }
 
 function stateTake_(doc, req, now) {
-  var d = { rev: doc.rev, holder: { id: String(req.clientId), name: String(req.name || 'Anotador').slice(0, 40), at: now }, state: doc.state };
+  var d = { rev: doc.rev, holder: { id: String(req.clientId), name: String(req.name || 'Anotador').slice(0, 40), email: req.email ? String(req.email) : '', tk: String(req.newTk || ''), at: now }, state: doc.state };
   var adopted = !!doc.state;
   if (!doc.state && req.state) { d.state = req.state; d.rev = doc.rev + 1; }
-  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: d.holder, state: d.state, adopted: adopted, now: now } };
+  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: pub_(d.holder), tk: d.holder.tk, state: d.state, adopted: adopted, now: now } };
 }
 
 function notHolder_(doc, now) {
-  return { doc: doc, persist: false, resp: { ok: false, code: 'NOT_HOLDER', message: 'Outra pessoa assumiu a súmula.', rev: doc.rev, holder: doc.holder, state: doc.state, now: now } };
+  return { doc: doc, persist: false, resp: { ok: false, code: 'NOT_HOLDER', message: 'Outra pessoa assumiu a súmula.', rev: doc.rev, holder: pub_(doc.holder), state: doc.state, now: now } };
 }
 
 function statePut_(doc, req, now) {
-  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
+  if (!isHolder_(doc, req)) return notHolder_(doc, now);
   if (!req.state) return { doc: doc, persist: false, resp: { ok: false, code: 'DADOS', message: 'Estado vazio.', now: now } };
-  var d = { rev: doc.rev + 1, holder: { id: doc.holder.id, name: req.name ? String(req.name).slice(0, 40) : doc.holder.name, at: now }, state: req.state };
-  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: d.holder, now: now } };
+  var d = { rev: doc.rev + 1, holder: { id: doc.holder.id, name: req.name ? String(req.name).slice(0, 40) : doc.holder.name, email: doc.holder.email || '', tk: doc.holder.tk, at: now }, state: req.state };
+  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: pub_(d.holder), now: now } };
 }
 
 function stateBeat_(doc, req, now) {
-  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
-  var d = { rev: doc.rev, holder: { id: doc.holder.id, name: doc.holder.name, at: now }, state: doc.state };
-  return { doc: d, persist: false, resp: { ok: true, rev: d.rev, holder: d.holder, now: now } };
+  if (!isHolder_(doc, req)) return notHolder_(doc, now);
+  var d = { rev: doc.rev, holder: { id: doc.holder.id, name: doc.holder.name, email: doc.holder.email || '', tk: doc.holder.tk, at: now }, state: doc.state };
+  return { doc: d, persist: false, resp: { ok: true, rev: d.rev, holder: pub_(d.holder), now: now } };
 }
 
 function stateRelease_(doc, req, now) {
-  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
+  if (!isHolder_(doc, req)) return notHolder_(doc, now);
   var d = { rev: doc.rev, holder: null, state: doc.state };
   return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: null, now: now } };
 }
@@ -188,12 +208,13 @@ function stateWriteGas_(req, who) {
   lock.waitLock(15000);
   try {
     var doc = loadDoc_(), now = Date.now(), r;
-    if (who && who.email && !req.name) req.name = who.email.split('@')[0];
+    if (who && who.email) { req.email = who.email; if (!req.name) req.name = who.email.split('@')[0]; }
     if (req.action === 'take') r = stateTake_(doc, req, now);
     else if (req.action === 'put') r = statePut_(doc, req, now);
     else if (req.action === 'beat') r = stateBeat_(doc, req, now);
     else r = stateRelease_(doc, req, now);
     if (r.doc !== doc) saveDoc_(r.doc, r.persist);
+    if (req.action === 'take' && r.resp.ok) log_(who, 'Assumiu a súmula', (doc.holder ? 'de ' + (doc.holder.email || doc.holder.name) : 'sem titular anterior'));
     return r.resp;
   } finally {
     lock.releaseLock();
@@ -397,10 +418,86 @@ function append_(req) {
   }
 }
 
+
+/* ---------- PDF da súmula (salvo na pasta "Sumulas" do Drive) ---------- */
+function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var PDF_COR = { Branco: ['#eeeeee', '#222222'], Azul: ['#2f5fb3', '#ffffff'], Marrom: ['#6b3a1e', '#ffffff'], Preto: ['#222222', '#ffffff'], Amarelo: ['#f2c200', '#222222'] };
+
+function pdfName_(iso) {
+  var p = String(iso).split('-');
+  return 'SUMULA ' + p[2] + '-' + p[1] + '-' + p[0].slice(2) + ' (digital).pdf';
+}
+
+function pdfTabela_(jogos) {
+  var m = {}, ord = [];
+  function T(n) { if (!m[n]) { m[n] = { t: n, j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0 }; ord.push(n); } return m[n]; }
+  jogos.forEach(function (j) {
+    var A = T(j.timeA), B = T(j.timeB), a = num_(j.golsA), b = num_(j.golsB);
+    A.j++; B.j++; A.gp += a; A.gc += b; B.gp += b; B.gc += a;
+    if (a > b) { A.v++; B.d++; } else if (b > a) { B.v++; A.d++; } else { A.e++; B.e++; }
+  });
+  return ord.map(function (n) { var r = m[n]; r.pts = r.v * 3 + r.e; return r; })
+    .sort(function (x, y) { return y.pts - x.pts || (y.gp - y.gc) - (x.gp - x.gc) || y.gp - x.gp; });
+}
+
+function pdfHtml_(req) {
+  var p = String(req.date).split('-'), dia = p[2] + '/' + p[1] + '/' + p[0];
+  var cor = function (t) { return PDF_COR[t] || ['#dddddd', '#222222']; };
+  var chip = function (t) { var c = cor(t); return '<span style="background:' + c[0] + ';color:' + c[1] + ';padding:1px 6px;border-radius:3px;border:1px solid #999">' + esc_(t) + '</span>'; };
+  var h = '<html><head><meta charset="utf-8"><style>' +
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#222}h1{font-size:17pt;margin:0 0 2px}h2{font-size:12pt;margin:14px 0 4px;border-bottom:2px solid #6b3a1e;padding-bottom:2px}' +
+    'table{border-collapse:collapse;width:100%;margin-bottom:6px}th,td{border:1px solid #bbb;padding:3px 5px;font-size:9.5pt;text-align:center}th{background:#f0e8de}td.l,th.l{text-align:left}' +
+    '.sub{color:#555;font-size:9pt}.gm{margin:0 0 5px;page-break-inside:avoid}.ev{font-size:9pt;color:#333;margin:0 0 0 14px}</style></head><body>';
+  h += '<h1>SÚMULA ' + dia + '</h1><div class="sub">Aranha Marrom · gerada pela súmula digital</div>';
+  // tabela do dia
+  h += '<h2>Resultado do dia</h2><table><tr><th class="l">Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th></tr>';
+  pdfTabela_(req.jogos).forEach(function (r) { h += '<tr><td class="l">' + chip(r.t) + '</td><td>' + r.j + '</td><td>' + r.v + '</td><td>' + r.e + '</td><td>' + r.d + '</td><td>' + r.gp + '</td><td>' + r.gc + '</td><td>' + (r.gp - r.gc) + '</td><td><b>' + r.pts + '</b></td></tr>'; });
+  h += '</table>';
+  // jogos
+  var gks = {}; (req.goleiros || []).forEach(function (g) { gks[g.n] = g; });
+  h += '<h2>Jogos</h2>';
+  req.jogos.forEach(function (j) {
+    var g = gks[j.n] || {};
+    h += '<div class="gm"><b>' + j.n + '.</b> ' + chip(j.timeA) + ' <b>' + num_(j.golsA) + ' × ' + num_(j.golsB) + '</b> ' + chip(j.timeB) + (g.gkA || g.gkB ? ' <span class="sub">· goleiros: ' + esc_(g.gkA || '—') + ' / ' + esc_(g.gkB || '—') + '</span>' : '');
+    (req.lances || []).filter(function (l) { return l.jogo === j.n; }).forEach(function (l) {
+      if ((l.tipo || 'Gol') === 'Gol') h += '<div class="ev">' + esc_(l.placar) + ' · Gol ' + (l.autor ? esc_(l.autor) : '(sem autor)') + ' (' + esc_(l.time) + ')' + (l.assist ? ' · assist. ' + esc_(l.assist) : '') + '</div>';
+      else h += '<div class="ev" style="color:#9a6b00"><b>Falta dura</b> · ' + esc_(l.autor) + ' (' + esc_(l.time) + ')</div>';
+    });
+    h += '</div>';
+  });
+  // atletas
+  h += '<h2>Atletas</h2>';
+  var grupos = [], gi = {};
+  req.atletas.forEach(function (a) { var k = a.ausente ? 'Faltou' : a.time; if (!(k in gi)) { gi[k] = grupos.length; grupos.push({ t: k, r: [] }); } grupos[gi[k]].r.push(a); });
+  grupos.forEach(function (G) {
+    h += '<table><tr><th class="l" colspan="9">' + (PDF_COR[G.t] ? chip(G.t) : esc_(G.t)) + '</th></tr><tr><th class="l">Atleta</th><th>Pos</th><th>Gols</th><th>Assist.</th><th>Vit.</th><th>Emp.</th><th>Falta dura</th><th>Bônus</th><th>Total</th></tr>';
+    G.r.forEach(function (a) {
+      var ps = a.pos === 'ZC' ? 'Zag' : (a.pos || '');
+      h += '<tr><td class="l">' + esc_(a.nome) + (a.ausente ? ' <span class="sub">(faltou)</span>' : '') + '</td><td>' + esc_(ps) + '</td><td>' + (a.ausente ? '' : num_(a.gols)) + '</td><td>' + (a.ausente ? '' : num_(a.ass)) + '</td><td>' + (a.ausente ? '' : num_(a.vit)) + '</td><td>' + (a.ausente ? '' : num_(a.emp)) + '</td><td>' + (a.falta ? a.falta : '') + '</td><td>' + (a.bonus ? a.bonus : '') + '</td><td><b>' + (a.total != null ? a.total : '') + '</b></td></tr>';
+    });
+    h += '</table>';
+  });
+  h += '<div class="sub">Pontuação: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença (2, atraso 1, falta −5), zagueiro com jogo sem sofrer gol, falta dura −2, bônus 5 para o time invicto.</div></body></html>';
+  return h;
+}
+
+function pdf_(req) {
+  validate_(req);
+  var props = PropertiesService.getScriptProperties();
+  var folder = DriveApp.getFolderById(props.getProperty('PDF_FOLDER_ID') || CFG.PDF_FOLDER_ID);
+  var name = pdfName_(req.date);
+  var blob = Utilities.newBlob(pdfHtml_(req), 'text/html', 'sumula.html').getAs('application/pdf').setName(name);
+  var it = folder.getFilesByName(name);
+  while (it.hasNext()) it.next().setTrashed(true);   // só substitui o PDF digital do mesmo dia; os PDFs escaneados têm outro nome
+  var file = folder.createFile(blob);
+  return { ok: true, name: name, url: file.getUrl(), folder: folder.getName() };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     norm_: norm_, spellingMap_: spellingMap_, buildAtletaRows_: buildAtletaRows_, buildJogoRows_: buildJogoRows_,
-    FORM: FORM, f_: f_, validate_: validate_,
+    FORM: FORM, f_: f_, validate_: validate_, pdfHtml_: pdfHtml_, pdfName_: pdfName_,
     emptyDoc_: emptyDoc_, stateView_: stateView_, stateTake_: stateTake_, statePut_: statePut_, stateBeat_: stateBeat_, stateRelease_: stateRelease_,
     handle_: handle_, append_: append_, _setGlobals: function (g) { Object.keys(g).forEach(function (k) { global[k] = g[k]; }); }
   };

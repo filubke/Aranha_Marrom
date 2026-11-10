@@ -182,6 +182,8 @@ td.dot2 span{display:inline-block;width:10px;height:10px;border-radius:50%;margi
 .foulb{width:100%;min-height:40px;margin-top:6px;background:#f5d000;color:#2a170c;border-color:#c9a800;font-weight:700}.foulb:disabled{opacity:.45}
 .fx{min-height:36px;min-width:36px;padding:0}
 .sech{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;padding:0;min-height:44px;color:var(--fg);text-align:left}.sech h2{margin:0}
+.sy{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:14px}.sy.me{background:var(--ok-bg,var(--surface-2))}.sy span{min-width:0}
+body.ro .gol,body.ro .foulb,body.ro .minus,body.ro .gkb,body.ro .addp,body.ro [data-act=start],body.ro .pn,body.ro .tag{opacity:.45}
 tr.sep td{background:var(--surface-2);font-family:var(--display);font-weight:700;text-align:left}
 .adj{display:grid;gap:8px;margin-top:8px}
 .adjr{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(2,auto);gap:6px 10px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px}
@@ -197,12 +199,14 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:8
 </style>
 </head>
 <body>
+<script src="config.js"></script>
 
 <div class="wrap">
   <header class="top">
     <div class="brand"><img src="data:image/jpeg;base64,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" alt="Aranha Marrom"><div><h1>Súmula</h1><small id="sub"></small></div></div>
     <div class="hb"><button id="bUndo" data-act="undo" aria-label="Desfazer última ação" title="Desfazer">↶</button><button data-act="cfg" aria-label="Configurações" title="Configurações">⚙</button></div>
   </header>
+  <div id="syncbar"></div>
   <main id="view"></main>
 </div>
 <div id="bar"></div>
@@ -225,7 +229,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 const BYN={}; ROSTER.forEach(r=>BYN[norm(r.n)]=r);
 const canon=n=>{const t=String(n||'').trim().replace(/\s+/g,' '); const r=BYN[norm(t)]; return r?r.n:t;};
-const LS='sumula-am-v1', CFGK='sumula-am-cfg-v1';
+const LS='sumula-am-v1', CFGK='sumula-am-cfg-v1', SYK='am-sync-v1';
+function CFG(){const c=lsGet(CFGK)||{}, d=window.AM_CONFIG||{}; return {url:c.url||d.SCRIPT_URL||'',key:c.key||'',clientId:c.clientId||d.CLIENT_ID||'',name:c.name||''};}
 const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
 
@@ -236,8 +241,8 @@ function mkTeams(n){return TEAMS.slice(0,n).map(t=>({c:t.k,players:[]}));}
 let S=lsGet(LS); if(!S||S.v!==1) S=fresh(); if(!S.absent) S.absent=[];
 let ui={closed:{},og:{},sheet:null,row:null,send:null,idToken:null,toast:null,pickMsg:''};
 const undo=[];
-function save(){lsSet(LS,S);}
-function commit(fn){undo.push(JSON.stringify(S)); if(undo.length>60) undo.shift(); fn(); syncGames(); save(); render();}
+function save(){lsSet(LS,S); if(SY.mode==='holder') schedPush();}
+function commit(fn){ if(RO()){ showToast('Só visualização. Toque em “Assumir” para anotar.'); return; } undo.push(JSON.stringify(S)); if(undo.length>60) undo.shift(); fn(); syncGames(); save(); render();}
 function doUndo(){ if(!undo.length) return; S=JSON.parse(undo.pop()); ui.sheet=null; save(); render(); }
 const T=i=>TK[S.teams[i].c];
 const rnd=n=>{const a=new Uint32Array(1); (window.crypto||{getRandomValues:x=>{x[0]=Math.random()*4294967296;}}).getRandomValues(a); return a[0]%n;};
@@ -315,14 +320,14 @@ function problems(){
 }
 function buildPayload(){
   const rows=compute();
-  const cfg=lsGet(CFGK)||{};
+  const cfg=CFG();
   const jogos=[],lances=[],gks=[];
   S.games.forEach((g,i)=>{ if(!g.done) return; const [a,b]=score(g); const A=TK[S.teams[g.a].c].sheet,B=TK[S.teams[g.b].c].sheet;
     jogos.push({n:i+1,timeA:A,golsA:a,golsB:b,timeB:B});
     gks.push({n:i+1,timeA:A,gkA:g.gk[0]||'',timeB:B,gkB:g.gk[1]||''});
     let pa=0,pb=0; g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; lances.push({jogo:i+1,ordem:k+1,time:x.s===0?A:B,autor:x.by==='*'?'':x.by,assist:x.as||'',placar:pa+'-'+pb,tipo:'Gol'}); });
     fl(g).forEach((f,k)=>{ lances.push({jogo:i+1,ordem:g.goals.length+k+1,time:f.s===0?A:B,autor:f.by,assist:'',placar:pa+'-'+pb,tipo:'Falta dura'}); }); });
-  return {action:'append',date:S.date,jogos:jogos,atletas:rows.map(r=>({time:r.time,nome:r.nome,gols:r.gols,ass:r.ass,vit:r.vit,emp:r.emp,assid:r.assid,falta:r.falta,bonus:r.bonus,gs:r.gs,pos:r.pos,ausente:!!r.ausente})),lances:lances,goleiros:gks,app:'sumula-am-1'};
+  return {action:'append',date:S.date,jogos:jogos,atletas:rows.map(r=>({total:r.total,time:r.time,nome:r.nome,gols:r.gols,ass:r.ass,vit:r.vit,emp:r.emp,assid:r.assid,falta:r.falta,bonus:r.bonus,gs:r.gs,pos:r.pos,ausente:!!r.ausente})),lances:lances,goleiros:gks,app:'sumula-am-1'};
 }
 /* leitura do texto do sorteio ("Copiar texto") */
 const cleanGk=n=>String(n||'').replace(/\(\s*joga mais\s*\)/ig,'').replace(/\s+/g,' ').trim();
@@ -415,8 +420,8 @@ function render(){
   const tabs=[['times','Times','👥'],['jogo','Jogo','⚽'],['resumo','Resumo','📋']];
   $('#tabs').innerHTML=tabs.map(t=>'<button data-act="tab" data-t="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'><span>'+t[2]+' '+t[1]+'</span>'+(t[0]==='jogo'&&pendTotal?'<span class="bd">'+pendTotal+' pend.</span>':'')+'</button>').join('');
   $('#view').innerHTML=S.tab==='times'?viewTimes():S.tab==='jogo'?viewJogo():viewResumo();
-  $('#bar').innerHTML=barHTML();
-  renderSheet(); renderToast();
+  $('#bar').innerHTML=RO()?'':barHTML();
+  renderSheet(); renderToast(); renderSync();
 }
 function teamCard(i){
   const t=S.teams[i],T0=TK[t.c];
@@ -484,7 +489,7 @@ function barHTML(){
   return '<div class="actbar"><div class="in">'+b+'</div></div>';
 }
 function viewResumo(){
-  const rows=compute(), R=teamTable(), pr=problems(), cfg=lsGet(CFGK)||{};
+  const rows=compute(), R=teamTable(), pr=problems(), cfg=CFG();
   const doneN=S.games.filter(g=>g.done).length;
   let h='';
   if(!S.games.length) return '<div class="card"><h2>Resumo</h2><p class="hint">Ainda não há jogos. Comece o dia na aba Times.</p></div>';
@@ -509,6 +514,7 @@ function viewResumo(){
       (op?'<div class="tbl"><table><tr><th>Atleta</th><th>Pos</th><th>Total</th><th>G</th><th>A</th><th>V</th><th>E</th><th>SG</th><th>GS</th></tr>'+G.r.map(r=>'<tr><td>'+esc(r.nome)+'</td><td>'+(r.pp?'<span class="pos p-'+r.pp+'">'+r.pp+'</span>':'–')+'</td><td><b>'+r.total+'</b></td><td>'+r.gols+'</td><td>'+r.ass+'</td><td>'+r.vit+'</td><td>'+r.emp+'</td><td>'+(r.zsg===null?'–':r.zsg)+'</td><td>'+(r.gs===null?'–':r.gs)+'</td></tr>').join('')+'</table></div>':'')+'</div>'; }).join('');
   if(spo) h+='<p class="hint" style="margin-top:8px">Pos: A atacante · M meio · Z zagueiro · G goleiro. SG = jogos sem sofrer gol (só zagueiros ZC). GS = gols sofridos (só goleiros).</p>';
   h+='</div>';
+  if(RO()) return h;
   /* envio */
   const ready=!pr.warn.length&&!pr.bad.length&&doneN>0;
   h+='<div class="card"><h2>Enviar para a planilha</h2>';
@@ -516,6 +522,10 @@ function viewResumo(){
   if(ui.send&&ui.send.state==='error') h+='<div class="badbox">'+esc(ui.send.msg)+'</div>';
   if(ui.send&&ui.send.state==='exists') h+='<div class="warnbox">'+esc(ui.send.msg)+'<div class="row" style="margin-top:8px"><button data-act="sendreplace" class="btn-primary">Substituir este sábado</button><button data-act="sendcancel">Cancelar</button></div></div>';
   h+='<div class="row"><button class="btn-primary" style="flex:1 1 220px;min-height:54px;font-size:17px" data-act="send"'+(ready&&cfg.url&&!(ui.send&&ui.send.state==='sending')?'':' disabled')+'>'+(ui.send&&ui.send.state==='sending'?'Enviando…':cfg.url?'Enviar resultados de '+dtxt(S.date):'Envio desligado (modo de teste)')+'</button></div>';
+  const pd=ui.pdf||{};
+  h+='<div class="row" style="margin-top:8px"><button style="flex:1 1 220px;min-height:48px" data-act="pdf"'+(cfg.url&&doneN&&pd.state!=='sending'?'':' disabled')+'>'+(pd.state==='sending'?'Gerando PDF…':'📄 Salvar PDF na pasta Sumulas do Drive')+'</button></div>';
+  if(pd.state==='ok') h+='<div class="okbox" style="margin-top:8px">PDF salvo: '+esc(pd.name)+(pd.url?' · <a href="'+esc(pd.url)+'" target="_blank" rel="noopener">abrir</a>':'')+'</div>';
+  if(pd.state==='error') h+='<div class="badbox" style="margin-top:8px">'+esc(pd.msg)+'</div>';
   if(!ready) h+='<p class="hint" style="margin-top:8px">'+(doneN?'Resolva os avisos acima para liberar o envio.':'Encerre pelo menos um jogo.')+(S.games.some(g=>!g.done)&&doneN?' Se o dia acabou, reduza “Jogos no dia” na aba Jogo.':'')+'</p>';
   if(!cfg.url) h+='<div class="warnbox" style="margin-top:10px">Modo de teste: nenhuma planilha está ligada, então nada é enviado. Você pode lançar um sábado inteiro e conferir o resumo sem risco.</div>';
   h+='<details style="margin-top:10px"><summary>Copiar as linhas para colar na planilha</summary><p class="hint">Cole na primeira linha livre da aba indicada. As colunas de fórmula já saem prontas se você informar a linha.</p><div class="row"><label class="hint">1ª linha livre em “2026” <input type="number" id="r26" min="2" style="width:90px"></label><label class="hint">1ª linha livre em “Jogos” <input type="number" id="rJ" min="2" style="width:90px"></label></div><div class="row" style="margin-top:8px"><button data-act="cp26">Copiar aba 2026</button><button data-act="cpJ">Copiar aba Jogos</button><button data-act="cpBk">Copiar backup (JSON)</button></div></details></div>';
@@ -536,6 +546,8 @@ function renderSheet(){
       const cand=pl.filter(n=>n!==x.by);
       body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
     }
+  } else if(sh.type==='take'){
+    body=takeSheet();
   } else if(sh.type==='foul'){
     const g=S.games[S.cur], T0=TK[S.teams[sh.s?g.b:g.a].c];
     body='<h2>🟨 Falta dura do '+T0.n+'</h2><div class="sub">Quem cometeu a falta? Vale −2 pontos para o atleta.</div><div class="pgrid">'+sidePlayers(g,sh.s).map(n=>'<button data-act="foulpick" data-n="'+esc(n)+'">'+esc(n)+(fl(g).some(f=>f.by===n)?'<small>🟨 já tem falta neste jogo</small>':'')+'</button>').join('')+'</div><div class="foot"><button data-act="close">Cancelar</button></div>';
@@ -555,7 +567,7 @@ function renderSheet(){
     body='<h2>'+(sh.t==='gk'?'Adicionar goleiro':sh.t==='abs'?'Quem faltou?':'Adicionar ao '+TK[S.teams[sh.t].c].n)+'</h2><div class="sub" id="pickMsg">'+esc(ui.pickMsg||'Toque no nome para adicionar. A janela fica aberta para você marcar vários.')+'</div><input type="text" id="pq" placeholder="Buscar atleta" autocomplete="off" style="width:100%"><div class="plist2" id="pl"></div><div class="foot"><button class="btn-primary" data-act="close">Pronto</button></div>';
   } else if(sh.type==='cfg'){
     const c=lsGet(CFGK)||{};
-    body='<h2>Configurações</h2><div class="cfg"><label>Endereço do script da planilha (Apps Script, termina em /exec)<input type="url" id="cUrl" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/…/exec"></label><label>Chave de acesso<input type="password" id="cKey" value="'+esc(c.key||'')+'" autocomplete="off"></label><label>Login com Google (opcional): ID do cliente OAuth<input type="text" id="cCli" value="'+esc(c.clientId||'')+'" placeholder="123456-abc.apps.googleusercontent.com"></label><div id="gbtn"></div><div class="hint" id="gstat">'+(ui.idToken?'Conectado com Google.':'')+'</div></div><div class="row" style="margin:10px 0"><button data-act="cfgsave" class="btn-primary">Salvar</button><button data-act="cfgtest">Testar conexão</button></div><div class="hint" id="cmsg"></div><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><button data-act="newday">Novo dia (apaga o dia atual)</button><button data-act="close">Fechar</button></div>';
+    body='<h2>Configurações</h2><div class="cfg"><label>Endereço do script da planilha (Apps Script, termina em /exec)<input type="url" id="cUrl" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/…/exec"></label><label>Seu nome (aparece para os outros quando você assume a súmula)<input type="text" id="cNome" value="'+esc(c.name||'')+'" autocomplete="name"></label><label>Chave de acesso<input type="password" id="cKey" value="'+esc(c.key||'')+'" autocomplete="off"></label><label>Login com Google (opcional): ID do cliente OAuth<input type="text" id="cCli" value="'+esc(c.clientId||'')+'" placeholder="123456-abc.apps.googleusercontent.com"></label><div id="gbtn"></div><div class="hint" id="gstat">'+(ui.idToken?'Conectado com Google.':'')+'</div></div><div class="row" style="margin:10px 0"><button data-act="cfgsave" class="btn-primary">Salvar</button><button data-act="cfgtest">Testar conexão</button></div><div class="hint" id="cmsg"></div><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><button data-act="newday">Novo dia (apaga o dia atual)</button><button data-act="close">Fechar</button></div>';
   } else if(sh.type==='newday'){
     body='<h2>Apagar o dia atual?</h2><div class="sub">Todos os jogos e lances deste dia serão apagados deste aparelho. O que já foi enviado para a planilha não muda.</div><div class="foot"><button data-act="close">Cancelar</button><button class="btn-primary" data-act="newdayok">Apagar e começar outro</button></div>';
   } else if(sh.type==='text'){
@@ -563,7 +575,7 @@ function renderSheet(){
   }
   el.innerHTML='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">'+body+'</div></div>';
   if(sh.type==='pick') fillPick();
-  if(sh.type==='cfg') initGoogle();
+  if(sh.type==='cfg'||sh.type==='take') initGoogle();
   if(sh.type==='text'){const t=$('#tx'); if(t){t.focus(); t.select();}}
 }
 function fillPick(q){
@@ -617,15 +629,25 @@ async function getToken(cfg){
   try{const p=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); if(p.exp*1000<Date.now()+30000){ui.idToken=null; throw new Error('O login do Google expirou. Entre de novo em ⚙.');}}catch(e){ if(/Google/.test(e.message)) throw e; }
   return t;
 }
+async function savePdf(){
+  const cfg=CFG(); if(!cfg.url){ ui.sheet={type:'cfg'}; render(); return; }
+  ui.pdf={state:'sending'}; render();
+  try{
+    const pl=buildPayload(); pl.action='pdf'; const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||'';
+    const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)}); const j=await r.json();
+    ui.pdf=j.ok?{state:'ok',name:j.name,url:j.url}:{state:'error',msg:(j.message||'O script recusou gerar o PDF.')+(j.code?' ('+j.code+')':'')};
+  }catch(e){ ui.pdf={state:'error',msg:/Google/.test(e.message)?e.message:'Sem conexão com o script. Tente de novo quando houver internet.'}; }
+  render();
+}
 async function send(replace){
-  const cfg=lsGet(CFGK)||{};
+  const cfg=CFG();
   if(!cfg.url){ ui.sheet={type:'cfg'}; render(); return; }
   ui.send={state:'sending'}; render();
   try{
     const pl=buildPayload(); pl.replace=!!replace; const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||'';
     const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)});
     const j=await r.json();
-    if(j.ok){ const w=j.written||{}; const msg=(w.atletas||0)+' atletas, '+(w.jogos||0)+' jogos, '+(w.lances||0)+' gols.'; S.sent={at:new Date().toLocaleString('pt-BR'),msg:msg}; save(); ui.send=null; showToast('Planilha atualizada'); }
+    if(j.ok){ const w=j.written||{}; const msg=(w.atletas||0)+' atletas, '+(w.jogos||0)+' jogos, '+(w.lances||0)+' gols.'; S.sent={at:new Date().toLocaleString('pt-BR'),msg:msg}; save(); ui.send=null; showToast('Planilha atualizada'); setTimeout(savePdf,0); }
     else if(j.code==='DATE_EXISTS'){ ui.send={state:'exists',msg:j.message}; }
     else ui.send={state:'error',msg:(j.message||'O script recusou o envio.')+(j.code?' ('+j.code+')':'')};
   }catch(e){ ui.send={state:'error',msg:/Google/.test(e.message)?e.message:'Sem conexão com o script. Os dados continuam salvos neste aparelho; tente de novo quando houver internet.'}; }
@@ -633,8 +655,8 @@ async function send(replace){
 }
 let gLoaded=false;
 function initGoogle(){
-  const c=lsGet(CFGK)||{}; const el=$('#gbtn'); if(!el||!c.clientId) return;
-  const go=()=>{ try{ window.google.accounts.id.initialize({client_id:c.clientId,callback:r=>{ui.idToken=r.credential; const s=$('#gstat'); if(s) s.textContent='Conectado com Google.';}}); window.google.accounts.id.renderButton(el,{theme:'outline',size:'large',locale:'pt-BR'}); }catch(e){} };
+  const c=CFG(); const el=$('#gbtn')||$('#gbtn2'); if(!el||!c.clientId) return;
+  const go=()=>{ try{ window.google.accounts.id.initialize({client_id:c.clientId,callback:r=>{ui.idToken=r.credential; const s=$('#gstat'); if(s) s.textContent='Conectado com Google.'; if(ui.sheet&&ui.sheet.type==='take') renderSheet();}}); window.google.accounts.id.renderButton(el,{theme:'outline',size:'large',locale:'pt-BR'}); }catch(e){} };
   if(window.google&&window.google.accounts){go();return;}
   if(gLoaded) return; gLoaded=true;
   const s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.async=true; s.onload=go; s.onerror=()=>{gLoaded=false; const g=$('#gstat'); if(g) g.textContent='Não foi possível carregar o login do Google neste ambiente.';}; document.head.appendChild(s);
@@ -647,17 +669,105 @@ async function testConn(){
     m.textContent=j.ok?'Conexão ok'+(j.sheet?' com a planilha “'+j.sheet+'”.':'.'):('Recusado: '+(j.message||j.code)); }
   catch(e){m.textContent='Não consegui falar com o script. Confira o endereço e se a implantação está como “Qualquer pessoa”.';}
 }
-function readCfg(){return {url:($('#cUrl')||{}).value?$('#cUrl').value.trim():'',key:($('#cKey')||{}).value||'',clientId:($('#cCli')||{}).value?$('#cCli').value.trim():''};}
+function readCfg(){return {url:($('#cUrl')||{}).value?$('#cUrl').value.trim():'',key:($('#cKey')||{}).value||'',clientId:($('#cCli')||{}).value?$('#cCli').value.trim():'',name:($('#cNome')||{}).value?$('#cNome').value.trim():''};}
+
+/* ---------- sincronismo entre celulares ---------- */
+const SY={mode:'off',holder:null,rev:null,tk:null,net:true,busy:false,skew:0,beat:0,retry:null};
+const cid=(()=>{try{let v=localStorage.getItem('am-cid'); if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('am-cid',v);} return v;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
+const syOn=()=>!!CFG().url;
+const RO=()=>syOn()&&SY.mode!=='holder';
+const ROOK={tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,takeok:1,close:1,scrim:1,cfg:1,cfgsave:1,cfgtest:1,toastact:1};
+(function(){ if(!syOn()) return; SY.mode='viewer'; const o=lsGet(SYK); if(o&&o.tk){SY.tk=o.tk; SY.rev=o.rev; SY.mode='holder';} })();
+async function api(body){
+  const u=CFG().url; body.clientId=cid;
+  try{ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}); const j=await r.json(); SY.net=true; if(j&&j.now) SY.skew=j.now-Date.now(); return j; }
+  catch(e){ SY.net=false; throw e; }
+}
+function adopt(st){
+  if(!st||st.v!==1) return; const tab=S.tab; S=st; if(!S.absent) S.absent=[]; S.tab=tab; undo.length=0; lsSet(LS,S);
+}
+function lost(j){
+  SY.mode='viewer'; SY.tk=null; try{localStorage.removeItem(SYK);}catch(e){} ui.sheet=null;
+  if(j){ SY.holder=j.holder||null; if(j.rev!=null) SY.rev=j.rev; if(j.state) adopt(j.state); }
+  showToast((SY.holder&&SY.holder.name?SY.holder.name:'Outra pessoa')+' assumiu a súmula. Agora você só visualiza.'); render();
+}
+let pushT=null;
+function schedPush(){ clearTimeout(pushT); pushT=setTimeout(doPush,700); }
+async function doPush(){
+  if(SY.mode!=='holder') return;
+  if(SY.busy){ schedPush(); return; }
+  SY.busy=true;
+  try{
+    const j=await api({action:'put',tk:SY.tk,state:S});
+    if(j.ok){ SY.rev=j.rev; SY.holder=j.holder; lsSet(SYK,{tk:SY.tk,rev:SY.rev}); }
+    else if(j.code==='NOT_HOLDER'){ SY.busy=false; lost(j); return; }
+  }catch(e){ clearTimeout(pushT); pushT=setTimeout(doPush,5000); }
+  SY.busy=false; renderSync();
+}
+async function syTick(){
+  if(!syOn()||SY.busy) return;
+  try{
+    if(SY.mode==='holder'){
+      if(Date.now()-SY.beat<14000) return; SY.beat=Date.now();
+      const j=await api({action:'beat',tk:SY.tk});
+      if(!j.ok&&j.code==='NOT_HOLDER') lost(j);
+    } else {
+      const j=await api({action:'state_get',since:SY.rev});
+      if(j.ok){ SY.holder=j.holder; const ch=!j.unchanged; if(ch){ SY.rev=j.rev; if(j.state) adopt(j.state); } if(ch) render(); }
+    }
+  }catch(e){}
+  renderSync();
+}
+function ageTxt(h){ if(!h) return ''; const s=Math.max(0,Math.round((Date.now()+SY.skew-h.at)/1000)); return s<90?'há '+s+' s':'há '+Math.round(s/60)+' min'; }
+function renderSync(){
+  const el=$('#syncbar'); if(!el) return; document.body.classList.toggle('ro',RO());
+  if(!syOn()){ el.innerHTML=''; return; }
+  let h;
+  if(SY.mode==='holder') h='<div class="sy me"><span>✏️ <b>Você está anotando</b>'+(SY.net?'':' · sem conexão, tentando de novo')+'</span></div>';
+  else h='<div class="sy"><span>👁 <b>Só visualização</b> · '+(SY.holder?esc(SY.holder.name)+' anota ('+ageTxt(SY.holder)+')':'ninguém anotando')+(SY.net?'':' · sem conexão')+'</span><button class="mini btn-primary" data-act="take">Assumir</button></div>';
+  el.innerHTML=h;
+}
+function takeSheet(){
+  const c=CFG(), fresh=SY.holder&&SY.holder.id!==cid&&(Date.now()+SY.skew-SY.holder.at)<60000;
+  const nm=ui.tname!=null?ui.tname:(c.name||(ui.email||'').split('@')[0]);
+  let b='<h2>Assumir a súmula</h2>';
+  if(fresh) b+='<div class="warnbox">'+esc(SY.holder.name)+' estava anotando '+ageTxt(SY.holder)+'. Quem assumir passa a anotar e ele(a) passa a só visualizar.</div>';
+  else b+='<div class="sub">Você passa a anotar; os outros celulares só visualizam.</div>';
+  b+='<label class="hint">Seu nome<input type="text" id="tName" value="'+esc(nm)+'" autocomplete="name" style="width:100%"></label>';
+  if(c.clientId&&!ui.idToken) b+='<div class="sub" style="margin-top:10px">Entre com sua conta Google para anotar. Ela fica registrada junto com o que você lançar.</div><div id="gbtn2"></div><div class="hint" id="gstat"></div>';
+  else if(!c.clientId&&!c.key) b+='<div class="badbox" style="margin-top:10px">Falta a chave de acesso. Abra ⚙ e informe.</div>';
+  else b+='<div class="okbox" style="margin-top:10px">'+(c.clientId?'Conectado com Google.':'Chave de acesso informada.')+'</div>';
+  const can=!(c.clientId&&!ui.idToken)&&(c.clientId||c.key);
+  b+='<div class="foot"><button data-act="close">Cancelar</button><button class="btn-primary" data-act="takeok"'+(can?'':' disabled')+'>Assumir agora</button></div>';
+  return b;
+}
+async function doTake(){
+  const c=CFG(), nm=(($('#tName')||{}).value||ui.tname||'').trim()||'Anotador'; ui.tname=nm;
+  try{ const raw=lsGet(CFGK)||{}; raw.name=nm; lsSet(CFGK,raw); }catch(e){}
+  try{
+    const pl={action:'take',name:nm,state:S}; const tok=await getToken(c); if(tok) pl.idToken=tok; else pl.key=c.key||'';
+    const j=await api(pl);
+    if(!j.ok){ showToast(j.message||'Não consegui assumir.'); return; }
+    SY.mode='holder'; SY.tk=j.tk; SY.holder=j.holder; SY.rev=j.rev; SY.beat=Date.now(); lsSet(SYK,{tk:j.tk,rev:j.rev});
+    if(j.adopted&&j.state) adopt(j.state);
+    ui.sheet=null; showToast(j.adopted?'Você assumiu. Estado do dia carregado.':'Você assumiu a súmula.'); render();
+  }catch(e){ showToast(/Google/.test(e.message)?e.message:'Sem conexão com o script. Tente de novo.'); }
+}
+setInterval(syTick,6000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) syTick(); });
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(e){
   const b=e.target.closest('[data-act]'); if(!b) return;
   const a=b.dataset.act, d=b.dataset;
   if(a==='scrim'){ if(e.target===b) closeSheet(); return; }
+  if(RO()&&!ROOK[a]){ showToast('Só visualização. Toque em “Assumir” para anotar.'); return; }
   switch(a){
     case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s}; render(); } break;
     case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push({s:s,by:d.n}); ui.sheet=null; }); break; }
     case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
+    case 'take': ui.sheet={type:'take'}; render(); break;
+    case 'takeok': doTake(); break;
     case 'tgame': ui.og[d.i]=!ui.og[d.i]; render(); break;
     case 'gall': S.games.forEach((g,i)=>{ui.og[i]=d.v==='1';}); render(); break;
     case 'tgrp': ui.closed[d.k]=!ui.closed[d.k]; render(); break;
@@ -704,6 +814,7 @@ document.addEventListener('click',function(e){
     case 'tot': commit(()=>{const done=S.games.filter(g=>g.done||g.goals.length).length; S.total=Math.max(done||1,Math.min(30,S.total+ +d.d));}); break;
     case 'adj': commit(()=>{const x=ex(d.n); x[d.f]=Math.max(0,x[d.f]+ +d.d); S.extras[d.n]=x;}); break;
     case 'send': send(false); break;
+    case 'pdf': savePdf(); break;
     case 'sendreplace': send(true); break;
     case 'sendcancel': ui.send=null; render(); break;
     case 'cp26': copyOut(tsv26(($('#r26')||{}).value),'Linhas da aba 2026','Cole na primeira linha livre da aba 2026.'); break;
@@ -716,15 +827,15 @@ document.addEventListener('click',function(e){
     case 'toastact': { const t=ui.toast; ui.toast=null; renderToast(); if(t&&t.act) t.act.fn(); break; }
   }
 });
-document.addEventListener('input',function(e){ if(e.target.id==='pq') fillPick(e.target.value); });
+document.addEventListener('input',function(e){ if(e.target.id==='pq') fillPick(e.target.value); if(e.target.id==='tName') ui.tname=e.target.value; });
 document.addEventListener('change',function(e){
-  const t=e.target;
+  const t=e.target; if(RO()&&(t.id==='fDate'||(t.dataset&&t.dataset.act==='gkteam'))){ showToast('Só visualização.'); render(); return; }
   if(t.id==='fDate'&&t.value){ commit(()=>{S.date=t.value;}); }
   if(t.dataset&&t.dataset.act==='gkteam'){ commit(()=>{S.gks[+t.dataset.j].t=t.value===''?null:+t.value;}); }
 });
 function closeSheet(){ui.sheet=null; render();}
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&ui.sheet) closeSheet(); });
-window.AM={get S(){return S;},set S(v){S=v;},compute,teamTable,buildPayload,parseSorteio,pending,score,tsv26,tsvJ,syncGames,pairAt,render,commit,setOrder,newGame};
+window.AM={SY,get S(){return S;},set S(v){S=v;},compute,teamTable,buildPayload,parseSorteio,pending,score,tsv26,tsvJ,syncGames,pairAt,render,commit,setOrder,newGame};
 if(S.games.length&&S.tab==='times'){}
 render();
 })();
