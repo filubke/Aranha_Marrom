@@ -463,7 +463,7 @@ function pdfHtml_(req) {
     (req.lances || []).filter(function (l) { return l.jogo === j.n; }).forEach(function (l) {
       var left = l.time === j.timeA, s;
       if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">' + esc_(l.placar) + ' · Gol ' + (l.autor ? esc_(l.autor) : '(sem autor)') + (l.assist ? ' <span class="sub">assist. ' + esc_(l.assist) + '</span>' : '') + '</div>';
-      else s = '<div class="ev" style="color:#9a6b00"><b>Falta dura</b> · ' + esc_(l.autor) + '</div>';
+      else s = '<div class="ev" style="color:' + (l.tipo === 'Agressão' ? '#b71c1c' : '#9a6b00') + '"><b>' + esc_(l.tipo) + '</b> · ' + esc_(l.autor) + '</div>';
       (left ? L : R).push(s);
     });
     h += '<div class="gm"><table style="margin:0"><tr><th style="width:50%;text-align:left">' + j.n + '. ' + chip(j.timeA) + '</th><th style="width:50%;text-align:right">' + chip(j.timeB) + '</th></tr>' +
@@ -476,14 +476,14 @@ function pdfHtml_(req) {
   var grupos = [], gi = {};
   req.atletas.forEach(function (a) { var k = a.ausente ? 'Faltou' : a.time; if (!(k in gi)) { gi[k] = grupos.length; grupos.push({ t: k, r: [] }); } grupos[gi[k]].r.push(a); });
   grupos.forEach(function (G) {
-    h += '<table><tr><th class="l" colspan="9">' + (PDF_COR[G.t] ? chip(G.t) : esc_(G.t)) + '</th></tr><tr><th class="l">Atleta</th><th>Pos</th><th>Gols</th><th>Assist.</th><th>Vit.</th><th>Emp.</th><th>Falta dura</th><th>Bônus</th><th>Total</th></tr>';
+    h += '<table><tr><th class="l" colspan="10">' + (PDF_COR[G.t] ? chip(G.t) : esc_(G.t)) + '</th></tr><tr><th class="l">Atleta</th><th>Pos</th><th>Gols</th><th>Assist.</th><th>Vit.</th><th>Emp.</th><th>Falta dura</th><th>Agressão</th><th>Bônus</th><th>Total</th></tr>';
     G.r.forEach(function (a) {
       var ps = a.pos === 'ZC' ? 'Zag' : (a.pos || '');
-      h += '<tr><td class="l">' + esc_(a.nome) + (a.ausente ? ' <span class="sub">(faltou)</span>' : '') + '</td><td>' + esc_(ps) + '</td><td>' + (a.ausente ? '' : num_(a.gols)) + '</td><td>' + (a.ausente ? '' : num_(a.ass)) + '</td><td>' + (a.ausente ? '' : num_(a.vit)) + '</td><td>' + (a.ausente ? '' : num_(a.emp)) + '</td><td>' + (a.falta ? a.falta : '') + '</td><td>' + (a.bonus ? a.bonus : '') + '</td><td><b>' + (a.total != null ? a.total : '') + '</b></td></tr>';
+      h += '<tr><td class="l">' + esc_(a.nome) + (a.ausente ? ' <span class="sub">(faltou)</span>' : '') + '</td><td>' + esc_(ps) + '</td><td>' + (a.ausente ? '' : num_(a.gols)) + '</td><td>' + (a.ausente ? '' : num_(a.ass)) + '</td><td>' + (a.ausente ? '' : num_(a.vit)) + '</td><td>' + (a.ausente ? '' : num_(a.emp)) + '</td><td>' + (a.falta ? a.falta : '') + '</td><td>' + (a.agr ? a.agr : '') + '</td><td>' + (a.bonus ? a.bonus : '') + '</td><td><b>' + (a.total != null ? a.total : '') + '</b></td></tr>';
     });
     h += '</table>';
   });
-  h += '<div class="sub">Pontuação: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença (2, atraso 1, falta −5), zagueiro com jogo sem sofrer gol, falta dura −2, bônus 5 para o time invicto.</div></body></html>';
+  h += '<div class="sub">Pontuação: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença (2, atraso 1, falta −5), zagueiro com jogo sem sofrer gol, falta dura −2, agressão −5, bônus 5 para o time de linha que ganhou todos os jogos e para o goleiro que sofreu menos gols.</div></body></html>';
   return h;
 }
 
