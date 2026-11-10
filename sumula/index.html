@@ -175,7 +175,7 @@ td.dot2 span{display:inline-block;width:10px;height:10px;border-radius:50%;margi
 .ghd .gt u{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid var(--line);flex:none}
 .ghd .gs{font-family:var(--display);font-weight:800;font-size:18px;white-space:nowrap}
 .car{font-style:normal;color:var(--muted);width:16px;text-align:center}
-.gdet{padding:2px 4px 10px 30px}.gl{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:14.5px}.gl small{color:var(--muted)}.pad{padding:0 4px 8px 30px}
+.gdet{padding:2px 4px 10px 4px}.gcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcol{min-width:0}.gcol .sc2{white-space:nowrap}.gcol.r{text-align:right}.gcol.r .gl{justify-content:flex-end}.gkrow{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:14px}.gkrow small{color:var(--muted)}.gl{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:14.5px}.gl small{color:var(--muted)}.pad{padding:0 4px 8px 30px}
 .grp{margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ghd2.nc{background:var(--surface-2)}.ghd2{font-family:var(--display);font-weight:700;padding:6px 12px}.ghd2>span:first-child{flex:1}.hint2{font-size:13px;color:var(--muted);font-weight:500}
 .pos{display:inline-block;min-width:26px;padding:1px 5px;border-radius:6px;background:var(--surface-2);font-size:12px;font-weight:700}
@@ -502,7 +502,11 @@ function viewResumo(){
   const gh='<div class="card"><button class="sech" data-act="tgrp" data-k="sg" aria-expanded="'+sgo+'"><h2>Jogos do dia</h2><i class="car">'+(sgo?'▾':'▸')+'</i></button>'+(sgo?'<div class="row" style="margin:4px 0"><button class="mini" data-act="gall" data-v="1">Abrir todos</button><button class="mini" data-act="gall" data-v="0">Fechar todos</button></div>':'');
   h+=gh+(!sgo?'':S.games.map((g,i)=>{ const sc=score(g), A=T(g.a), B=T(g.b), op=!!ui.og[i];
     let d='';
-    if(op){ let pa=0,pb=0; d='<div class="gdet">'+(g.goals.length?g.goals.map(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); return '<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span class="dot u-'+S.teams[x.s?g.b:g.a].c+'"></span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'?' <small>'+esc(e.as)+'</small>':'')+'</span></div>';}).join(''):'<div class="hint">Sem gols.</div>')+fl(g).map(f=>'<div class="gl"><span class="sc2">🟨</span><span class="dot u-'+S.teams[f.s?g.b:g.a].c+'"></span><span>Falta dura: '+esc(f.by)+'</span></div>').join('')+'<div class="hint" style="margin-top:6px">🧤 '+esc(g.gk[0]||'—')+' × '+esc(g.gk[1]||'—')+'</div></div>'; }
+    if(op){ let pa=0,pb=0; const L=[],R=[];
+      g.goals.forEach(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); (x.s===0?L:R).push('<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'&&!/^Sem/i.test(e.as)?' <small>'+esc(e.as.replace(/^Assistência:\s*/,'assist. '))+'</small>':'')+'</span></div>'); });
+      fl(g).forEach(f=>{ (f.s===0?L:R).push('<div class="gl"><span>🟨 '+esc(f.by)+' <small>falta dura</small></span></div>'); });
+      const none='<div class="hint">—</div>';
+      d='<div class="gdet"><div class="gcols"><div class="gcol">'+(L.join('')||none)+'</div><div class="gcol r">'+(R.join('')||none)+'</div></div><div class="gcols gkrow"><div class="gcol"><small>Goleiro</small> 🧤 '+esc(g.gk[0]||'—')+'</div><div class="gcol r">'+esc(g.gk[1]||'—')+' 🧤 <small>Goleiro</small></div></div></div>'; }
     return '<div class="gsum'+(g.done?'':' todo')+'"><button class="ghd" data-act="tgame" data-i="'+i+'" aria-expanded="'+op+'"><b>'+(i+1)+'</b><span class="gt"><u class="u-'+S.teams[g.a].c+'"></u>'+A.n+'</span><span class="gs">'+(g.done||g.goals.length?sc[0]+' × '+sc[1]:'–')+'</span><span class="gt r">'+B.n+'<u class="u-'+S.teams[g.b].c+'"></u></span><i class="car">'+(op?'▾':'▸')+'</i></button>'+(g.done?'':'<div class="hint pad">'+(i===S.cur&&g.goals.length?'em andamento':'ainda não encerrado')+'</div>')+d+'</div>'; }).join(''))+'</div>';
   /* atletas por time */
   const groups=[]; rows.forEach(r=>{ const k=r.ausente?'abs':r.gk?'gk':'t'+r.team; let G=groups[groups.length-1]; if(!G||G.k!==k){G={k:k,r:[],title:r.ausente?'🚫 Faltou':r.gk?'🧤 Goleiros':TK[S.teams[r.team].c].e+' '+TK[S.teams[r.team].c].n,tc:r.team>=0?S.teams[r.team].c:''}; groups.push(G);} G.r.push(r); });

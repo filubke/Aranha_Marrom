@@ -459,12 +459,17 @@ function pdfHtml_(req) {
   h += '<h2>Jogos</h2>';
   req.jogos.forEach(function (j) {
     var g = gks[j.n] || {};
-    h += '<div class="gm"><b>' + j.n + '.</b> ' + chip(j.timeA) + ' <b>' + num_(j.golsA) + ' × ' + num_(j.golsB) + '</b> ' + chip(j.timeB) + (g.gkA || g.gkB ? ' <span class="sub">· goleiros: ' + esc_(g.gkA || '—') + ' / ' + esc_(g.gkB || '—') + '</span>' : '');
+    var L = [], R = [];
     (req.lances || []).filter(function (l) { return l.jogo === j.n; }).forEach(function (l) {
-      if ((l.tipo || 'Gol') === 'Gol') h += '<div class="ev">' + esc_(l.placar) + ' · Gol ' + (l.autor ? esc_(l.autor) : '(sem autor)') + ' (' + esc_(l.time) + ')' + (l.assist ? ' · assist. ' + esc_(l.assist) : '') + '</div>';
-      else h += '<div class="ev" style="color:#9a6b00"><b>Falta dura</b> · ' + esc_(l.autor) + ' (' + esc_(l.time) + ')</div>';
+      var left = l.time === j.timeA, s;
+      if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">' + esc_(l.placar) + ' · Gol ' + (l.autor ? esc_(l.autor) : '(sem autor)') + (l.assist ? ' <span class="sub">assist. ' + esc_(l.assist) + '</span>' : '') + '</div>';
+      else s = '<div class="ev" style="color:#9a6b00"><b>Falta dura</b> · ' + esc_(l.autor) + '</div>';
+      (left ? L : R).push(s);
     });
-    h += '</div>';
+    h += '<div class="gm"><table style="margin:0"><tr><th style="width:50%;text-align:left">' + j.n + '. ' + chip(j.timeA) + '</th><th style="width:50%;text-align:right">' + chip(j.timeB) + '</th></tr>' +
+      '<tr><td colspan="2" style="font-size:12pt"><b>' + num_(j.golsA) + ' × ' + num_(j.golsB) + '</b></td></tr>' +
+      '<tr><td class="l" style="vertical-align:top">' + (L.join('') || '<span class="sub">—</span>') + '</td><td style="text-align:right;vertical-align:top">' + (R.join('') || '<span class="sub">—</span>') + '</td></tr>' +
+      ((g.gkA || g.gkB) ? '<tr><td class="l sub">Goleiro: ' + esc_(g.gkA || '—') + '</td><td class="sub" style="text-align:right">Goleiro: ' + esc_(g.gkB || '—') + '</td></tr>' : '') + '</table></div>';
   });
   // atletas
   h += '<h2>Atletas</h2>';
