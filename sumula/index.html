@@ -661,7 +661,7 @@ async function savePdf(){
   const cfg=CFG(); if(!cfg.url){ ui.sheet={type:'cfg'}; render(); return; }
   ui.pdf={state:'sending'}; render();
   try{
-    const pl=buildPayload(); pl.action='pdf'; const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||'';
+    const pl=buildPayload(); pl.action='pdf'; await authFields(pl,cfg);
     const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)}); const j=await r.json();
     ui.pdf=j.ok?{state:'ok',name:j.name,url:j.url}:{state:'error',msg:(j.message||'O script recusou gerar o PDF.')+(j.code?' ('+j.code+')':'')};
   }catch(e){ ui.pdf={state:'error',msg:/Google/.test(e.message)?e.message:'Sem conexão com o script. Tente de novo quando houver internet.'}; }
@@ -672,7 +672,7 @@ async function send(replace){
   if(!cfg.url){ ui.sheet={type:'cfg'}; render(); return; }
   ui.send={state:'sending'}; render();
   try{
-    const pl=buildPayload(); pl.replace=!!replace; const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||'';
+    const pl=buildPayload(); pl.replace=!!replace; await authFields(pl,cfg);
     const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)});
     const j=await r.json();
     if(j.ok){ const w=j.written||{}; const msg=(w.atletas||0)+' atletas, '+(w.jogos||0)+' jogos, '+(w.lances||0)+' gols.'; S.sent={at:new Date().toLocaleString('pt-BR'),msg:msg}; save(); ui.send=null; showToast('Planilha atualizada'); render(); return true; }
@@ -700,11 +700,16 @@ async function testConn(){
 function readCfg(){return {url:($('#cUrl')||{}).value?$('#cUrl').value.trim():'',key:($('#cKey')||{}).value||'',clientId:($('#cCli')||{}).value?$('#cCli').value.trim():'',name:($('#cNome')||{}).value?$('#cNome').value.trim():''};}
 
 /* ---------- sincronismo entre celulares ---------- */
+const ACCK='am-access';
+async function authFields(pl,cfg){ const ac=lsGet(ACCK); if(ac&&ac.code){ pl.code=ac.code; return; } await authFields(pl,cfg); }
+async function checkAcc(){ const ac=lsGet(ACCK); if(!ac||!ac.code||!syOn()) return; try{ const j=await api({action:'access_status',code:ac.code}); if(j.ok){ const old=ui.acc; ui.acc=j.status; if(j.status==='desconhecido'){ try{localStorage.removeItem(ACCK);}catch(e){} } if(old!==ui.acc&&ui.sheet&&ui.sheet.type==='take') renderSheet(); } }catch(e){} }
+async function reqAccess(){ const nm=(($('#tName')||{}).value||'').trim(); if(!nm){ showToast('Escreva seu nome para pedir acesso.'); return; } ui.tname=nm;
+  try{ const j=await api({action:'access_request',name:nm}); if(j.ok){ lsSet(ACCK,{code:j.code,name:j.name}); ui.acc='pendente'; renderSheet(); } else showToast(j.message||'Não consegui enviar o pedido.'); }catch(e){ showToast('Sem conexão com o script. Tente de novo.'); } }
 const SY={mode:'off',holder:null,rev:null,tk:null,net:true,busy:false,skew:0,beat:0,retry:null};
 const cid=(()=>{try{let v=localStorage.getItem('am-cid'); if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('am-cid',v);} return v;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
 const syOn=()=>!!CFG().url;
 const RO=()=>syOn()&&SY.mode!=='holder';
-const ROOK={tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,takeok:1,close:1,scrim:1,cfg:1,cfgsave:1,cfgtest:1,toastact:1};
+const ROOK={accreq:1,accchk:1,tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,takeok:1,close:1,scrim:1,cfg:1,cfgsave:1,cfgtest:1,toastact:1};
 (function(){ if(!syOn()) return; SY.mode='viewer'; const o=lsGet(SYK); if(o&&o.tk){SY.tk=o.tk; SY.rev=o.rev; SY.mode='holder';} })();
 async function api(body){
   const u=CFG().url; body.clientId=cid;
@@ -734,6 +739,7 @@ async function doPush(){
 }
 async function syTick(){
   if(!syOn()||SY.busy) return;
+  if(ui.sheet&&ui.sheet.type==='take'&&ui.acc!=='liberado') checkAcc();
   try{
     if(SY.mode==='holder'){
       if(Date.now()-SY.beat<14000) return; SY.beat=Date.now();
@@ -762,10 +768,16 @@ function takeSheet(){
   if(fresh) b+='<div class="warnbox">'+esc(SY.holder.name)+' estava anotando '+ageTxt(SY.holder)+'. Quem assumir passa a anotar e ele(a) passa a só visualizar.</div>';
   else b+='<div class="sub">Você passa a anotar; os outros celulares só visualizam.</div>';
   b+='<label class="hint">Seu nome<input type="text" id="tName" value="'+esc(nm)+'" autocomplete="name" style="width:100%"></label>';
-  if(c.clientId&&!ui.idToken) b+='<div class="sub" style="margin-top:10px">Entre com sua conta Google para anotar. Ela fica registrada junto com o que você lançar.</div><div id="gbtn2"></div><div class="hint" id="gstat"></div>';
-  else if(!c.clientId&&!c.key) b+='<div class="badbox" style="margin-top:10px">Falta a chave de acesso. Abra ⚙ e informe.</div>';
-  else b+='<div class="okbox" style="margin-top:10px">'+(c.clientId?'Conectado com Google.':'Chave de acesso informada.')+'</div>';
-  const can=!(c.clientId&&!ui.idToken)&&(c.clientId||c.key);
+  const ac=lsGet(ACCK); let can=false;
+  if(ac&&ac.code){
+    if(ui.acc==='liberado'){ b+='<div class="okbox" style="margin-top:10px">Acesso liberado para <b>'+esc(ac.name)+'</b>.</div>'; can=true; }
+    else b+='<div class="warnbox" style="margin-top:10px">Pedido enviado como <b>'+esc(ac.name)+'</b>. Aguarde o administrador liberar seu nome na aba <b>Acessos</b> da planilha. Esta tela confere sozinha.<div class="row" style="margin-top:8px"><button data-act="accchk">Conferir agora</button></div></div>';
+  } else if(c.key){ b+='<div class="okbox" style="margin-top:10px">Chave de acesso informada.</div>'; can=true; }
+  else if(c.clientId&&ui.idToken){ b+='<div class="okbox" style="margin-top:10px">Conectado com Google.</div>'; can=true; }
+  else {
+    b+='<div class="sub" style="margin-top:10px">Para anotar é preciso ter o acesso liberado pelo administrador. Escreva seu nome e peça; depois é só esperar a liberação.</div><div class="row" style="margin-top:6px"><button class="btn-primary" data-act="accreq">Pedir acesso</button></div>';
+    if(c.clientId) b+='<div class="sub" style="margin-top:10px">Ou entre com Google:</div><div id="gbtn2"></div><div class="hint" id="gstat"></div>';
+  }
   b+='<div class="foot"><button data-act="close">Cancelar</button><button class="btn-primary" data-act="takeok"'+(can?'':' disabled')+'>Assumir agora</button></div>';
   return b;
 }
@@ -773,7 +785,7 @@ async function doTake(){
   const c=CFG(), nm=(($('#tName')||{}).value||ui.tname||'').trim()||'Anotador'; ui.tname=nm;
   try{ const raw=lsGet(CFGK)||{}; raw.name=nm; lsSet(CFGK,raw); }catch(e){}
   try{
-    const pl={action:'take',name:nm,state:S}; const tok=await getToken(c); if(tok) pl.idToken=tok; else pl.key=c.key||'';
+    const pl={action:'take',name:nm,state:S}; await authFields(pl,c);
     const j=await api(pl);
     if(!j.ok){ showToast(j.message||'Não consegui assumir.'); return; }
     SY.mode='holder'; SY.tk=j.tk; SY.holder=j.holder; SY.rev=j.rev; SY.beat=Date.now(); lsSet(SYK,{tk:j.tk,rev:j.rev});
@@ -794,8 +806,10 @@ document.addEventListener('click',function(e){
     case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s,k:d.k||''}; render(); } break;
     case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push(ui.sheet.k==='a'?{s:s,by:d.n,k:'a'}:{s:s,by:d.n}); ui.sheet=null; }); break; }
     case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
-    case 'take': ui.sheet={type:'take'}; render(); break;
+    case 'take': ui.sheet={type:'take'}; ui.acc=null; render(); checkAcc(); break;
     case 'takeok': doTake(); break;
+    case 'accreq': reqAccess(); break;
+    case 'accchk': checkAcc(); break;
     case 'tgame': ui.og[d.i]=!ui.og[d.i]; render(); break;
     case 'gall': S.games.forEach((g,i)=>{ui.og[i]=d.v==='1';}); render(); break;
     case 'tgrp': ui.closed[d.k]=!ui.closed[d.k]; render(); break;

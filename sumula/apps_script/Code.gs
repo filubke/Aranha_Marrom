@@ -3,8 +3,10 @@
  *
  * INSTALAÇÃO (uma vez, uns 5 minutos). Faça primeiro na CÓPIA DE TESTE da planilha.
  * 1. Abra a planilha > Extensões > Apps Script. Apague o conteúdo e cole este arquivo.
- * 2. Engrenagem (Configurações do projeto) > Propriedades do script > Adicionar:
- *      ACCESS_KEY         uma senha para quem pode anotar (ex.: aranha-2026-xyz)   <- fase 1
+ * 2. Quem pode anotar: o modo mais simples NÃO precisa de nenhuma propriedade. Na súmula, quem quer anotar toca em
+ *    Assumir > "Pedir acesso"; o pedido cai na aba "Acessos" da planilha e o administrador marca a caixa "Liberado".
+ *    (Opcional) Engrenagem (Configurações do projeto) > Propriedades do script > Adicionar:
+ *      ACCESS_KEY         uma senha própria do administrador (ex.: aranha-2026-xyz)
  *    Quando for ligar o login com Google (fase 2), adicione também:
  *      GOOGLE_CLIENT_ID   ID do cliente OAuth (tipo "Aplicativo da Web")
  *      ALLOWED_EMAILS     e-mails de quem pode anotar, separados por vírgula
@@ -65,7 +67,11 @@ function handle_(req) {
     case 'ping':
       var edit = true, why = '', who0 = null;
       try { who0 = auth_(req); } catch (e) { edit = false; why = e.message; }
-      return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName(), edit: edit, why: why, email: edit && who0 ? who0.email || '' : '' };
+      return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName(), edit: edit, why: why, email: edit && who0 ? who0.email || who0.name || '' : '' };
+    case 'access_request':      // público: qualquer pessoa pode PEDIR; quem libera é o administrador na planilha
+      return accessRequest_(req);
+    case 'access_status':
+      return accessStatus_(req);
     case 'state_get':           // público: ver o jogo ao vivo não exige login
       return stateGetGas_(req);
     case 'take':                // assumir exige login (ou chave); put/beat/release usam o tk devolvido pelo take
@@ -94,13 +100,49 @@ function handle_(req) {
 function log_(who, evento, detalhe) {
   try {
     var sh = ensureTab_(SpreadsheetApp.getActiveSpreadsheet(), 'Log_Sumula', ['Quando', 'Quem', 'O que', 'Detalhe']);
-    sh.appendRow([new Date(), (who && who.email) || '(chave de acesso)', evento, detalhe || '']);
+    sh.appendRow([new Date(), (who && (who.email || who.name)) || '(chave de acesso)', evento, detalhe || '']);
   } catch (e) {}
 }
 
 /* ---------- acesso ---------- */
+/* ---------- pedido de acesso (sem Google Cloud): a pessoa pede, o administrador libera marcando a caixa na aba "Acessos" ---------- */
+var ACC_HEAD = ['Nome', 'Código', 'Pedido em', 'Liberado', 'Último uso'];
+function accSheet_() { return ensureTab_(SpreadsheetApp.getActiveSpreadsheet(), 'Acessos', ACC_HEAD); }
+function accFind_(code) {
+  code = String(code || '').trim().toUpperCase(); if (!code) return null;
+  var sh = accSheet_(), v = sh.getDataRange().getValues();
+  for (var i = 1; i < v.length; i++) {
+    if (String(v[i][1]).toUpperCase() === code) {
+      var ok = v[i][3] === true || /^(sim|true|x|ok|1)$/i.test(String(v[i][3]).trim());
+      return { sh: sh, row: i + 1, name: String(v[i][0]), ok: ok };
+    }
+  }
+  return null;
+}
+function accessRequest_(req) {
+  var name = String(req.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!name) fail_('BAD', 'Informe seu nome para pedir acesso.');
+  var code = Utilities.getUuid().replace(/-/g, '').slice(0, 8).toUpperCase();
+  var sh = accSheet_();
+  sh.appendRow([name, code, new Date(), false, '']);
+  sh.getRange(sh.getLastRow(), 4).insertCheckboxes();
+  return { ok: true, code: code, name: name };
+}
+function accessStatus_(req) {
+  var a = accFind_(req.code);
+  if (!a) return { ok: true, status: 'desconhecido' };
+  return { ok: true, status: a.ok ? 'liberado' : 'pendente', name: a.name };
+}
+
 function auth_(req) {
   var p = PropertiesService.getScriptProperties();
+  if (req.code) {
+    var a = accFind_(req.code);
+    if (!a) fail_('AUTH', 'Código de acesso desconhecido. Peça o acesso de novo.');
+    if (!a.ok) fail_('AUTH', 'Seu acesso ainda não foi liberado pelo administrador.');
+    a.sh.getRange(a.row, 5).setValue(new Date());
+    return { email: '', name: a.name };
+  }
   var cid = p.getProperty('GOOGLE_CLIENT_ID');
   if (cid) {
     if (!req.idToken) fail_('AUTH', 'Entre com sua conta Google na súmula.');
@@ -209,6 +251,7 @@ function stateWriteGas_(req, who) {
   try {
     var doc = loadDoc_(), now = Date.now(), r;
     if (who && who.email) { req.email = who.email; if (!req.name) req.name = who.email.split('@')[0]; }
+    if (who && who.name) req.name = who.name;
     if (req.action === 'take') r = stateTake_(doc, req, now);
     else if (req.action === 'put') r = statePut_(doc, req, now);
     else if (req.action === 'beat') r = stateBeat_(doc, req, now);

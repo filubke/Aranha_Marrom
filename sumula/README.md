@@ -23,8 +23,9 @@ Siga o cabeçalho de `apps_script/Code.gs`. Depois cole o endereço `/exec` e a 
 
 ## Vários celulares (um anota por vez)
 - Quem só quer ver abre a página: sem login, atualiza sozinha a cada ~6 s.
-- Para anotar, toque em **Assumir** (exige login Google ou a chave de acesso). Quem estava anotando passa a só visualizar. Cada troca fica registrada na aba `Log_Sumula` da planilha, com o e-mail de quem assumiu, o horário, e também cada envio de resultados e de PDF.
-- Configure em `config.js`: `SCRIPT_URL` (endereço `/exec`) e `CLIENT_ID` (ID do cliente OAuth). Propriedades do script: `GOOGLE_CLIENT_ID`, `ALLOWED_EMAILS` (e-mails de quem pode anotar, separados por vírgula) ou `ACCESS_KEY`.
+- Para anotar, toque em **Assumir**. Na primeira vez, escreva seu nome e toque em **Pedir acesso**: o pedido aparece na aba `Acessos` da planilha e o administrador marca a caixa **Liberado**. A tela confere sozinha e o botão "Assumir agora" acende. Não precisa de login Google nem de nenhuma configuração extra.
+- Quem estava anotando passa a só visualizar. Cada troca, cada envio e cada PDF ficam na aba `Log_Sumula`, com o nome de quem fez e o horário.
+- Configure em `config.js` só o `SCRIPT_URL` (endereço `/exec`). `CLIENT_ID` e as propriedades `GOOGLE_CLIENT_ID`/`ALLOWED_EMAILS` são opcionais (login Google); `ACCESS_KEY` é uma senha opcional do administrador.
 - O estado do dia fica guardado na aba oculta `_SumulaEstado`. O que o antigo titular digitou sem conexão e não chegou a enviar se perde quando outra pessoa assume.
 
 ## PDF no Drive
