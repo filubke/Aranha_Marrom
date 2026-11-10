@@ -1,25 +1,28 @@
 /**
  * Súmula Aranha Marrom — receptor da planilha "Bola de Ouro Aranha Marrom 2026"
  *
- * INSTALAÇÃO (uma vez, uns 5 minutos)
+ * INSTALAÇÃO (uma vez, uns 5 minutos). Faça primeiro na CÓPIA DE TESTE da planilha.
  * 1. Abra a planilha > Extensões > Apps Script. Apague o conteúdo e cole este arquivo.
  * 2. Engrenagem (Configurações do projeto) > Propriedades do script > Adicionar:
- *      ACCESS_KEY      uma senha qualquer (ex.: aranha-2026-xyz)       <- login simples (fase 1)
+ *      ACCESS_KEY         uma senha para quem pode anotar (ex.: aranha-2026-xyz)   <- fase 1
  *    Quando for ligar o login com Google (fase 2), adicione também:
  *      GOOGLE_CLIENT_ID   ID do cliente OAuth (tipo "Aplicativo da Web")
- *      ALLOWED_EMAILS     e-mails permitidos, separados por vírgula
- *    Com GOOGLE_CLIENT_ID preenchido, a chave deixa de valer e só entra quem estiver na lista.
+ *      ALLOWED_EMAILS     e-mails de quem pode anotar, separados por vírgula
+ *    Com GOOGLE_CLIENT_ID preenchido, a chave deixa de valer e só anota quem estiver na lista.
  * 3. Implantar > Nova implantação > tipo "App da Web":
  *      Executar como: Eu     |     Quem tem acesso: Qualquer pessoa
  *    Autorize quando o Google pedir. Copie o endereço que termina em /exec.
- * 4. Na súmula: ⚙ > cole o endereço e a chave > Testar conexão.
+ * 4. Cole o endereço em sumula/config.js (SCRIPT_URL) ou em ⚙ na súmula, e use "Testar conexão".
+ *    Depois de editar o código, use Implantar > Gerenciar implantações > editar > Nova versão.
  *
- * O QUE GRAVA
- * - Aba "2026": uma linha por atleta, com as mesmas fórmulas das linhas atuais (colunas B, D, L, O, Q).
- *   Quem faltou entra no grupo "Faltou" com presença -5, como já é feito hoje.
- * - Aba "Jogos": uma linha por jogo.
- * - Abas novas "Lances" (cada gol com autor e assistência) e "Goleiros_Jogo" (goleiro de cada time por jogo).
- * Nada existente é alterado. Um sábado que já está na planilha não é gravado de novo sem confirmação.
+ * COMO FUNCIONA
+ * - Qualquer pessoa com o link VÊ o jogo ao vivo (sem login).
+ * - Só quem tem a chave (ou e-mail permitido) pode ASSUMIR a súmula e anotar. Um anotador por vez;
+ *   quem assume depois toma o lugar do anterior.
+ * - O estado do dia fica no cache do Google (rápido) e numa aba oculta "_SumulaEstado" (durável).
+ * - No fim do dia, o anotador envia: o script grava nas abas "2026" e "Jogos" com as fórmulas atuais e
+ *   cria as abas "Lances" (gols e faltas graves) e "Goleiros_Jogo". Nada existente é alterado.
+ *   Um sábado que já está na planilha não é gravado de novo sem confirmação.
  */
 
 var CFG = {
@@ -27,6 +30,7 @@ var CFG = {
   TAB_JOGOS: 'Jogos',
   TAB_LANCES: 'Lances',
   TAB_GK: 'Goleiros_Jogo',
+  TAB_ESTADO: '_SumulaEstado',
   TZ: 'America/Sao_Paulo'
 };
 
@@ -56,12 +60,22 @@ function fail_(code, msg) {
 }
 
 function handle_(req) {
-  auth_(req);
-  if (req.action === 'ping') {
-    return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
-  }
-  if (req.action === 'append') {
-    return append_(req);
+  switch (req.action) {
+    case 'ping':
+      var edit = true, why = '';
+      try { auth_(req); } catch (e) { edit = false; why = e.message; }
+      return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName(), edit: edit, why: why };
+    case 'state_get':           // público: ver o jogo ao vivo não exige login
+      return stateGetGas_(req);
+    case 'take':
+    case 'put':
+    case 'beat':
+    case 'release':
+      var who = auth_(req);
+      return stateWriteGas_(req, who);
+    case 'append':
+      auth_(req);
+      return append_(req);
   }
   fail_('ACAO', 'Ação desconhecida.');
 }
@@ -78,15 +92,115 @@ function auth_(req) {
     if (t.aud !== cid) fail_('AUTH', 'Login emitido para outro aplicativo.');
     if (String(t.email_verified) !== 'true') fail_('AUTH', 'E-mail do Google não verificado.');
     var allowed = (p.getProperty('ALLOWED_EMAILS') || '').toLowerCase().split(',').map(function (s) { return s.trim(); }).filter(String);
-    if (allowed.indexOf(String(t.email).toLowerCase()) < 0) fail_('AUTH', 'Este e-mail não tem permissão para lançar resultados.');
-    return;
+    if (allowed.indexOf(String(t.email).toLowerCase()) < 0) fail_('AUTH', 'Este e-mail não tem permissão para anotar.');
+    return { email: String(t.email) };
   }
   var key = p.getProperty('ACCESS_KEY');
   if (!key) fail_('AUTH', 'Defina ACCESS_KEY (ou GOOGLE_CLIENT_ID) nas propriedades do script.');
   if (req.key !== key) fail_('AUTH', 'Chave de acesso incorreta.');
+  return {};
 }
 
-/* ---------- utilidades puras (testáveis fora do Google) ---------- */
+/* ---------- estado compartilhado (lógica pura, testável fora do Google) ---------- */
+// doc = { rev, holder: {id,name,at} | null, state | null }.  Só o "holder" escreve; assumir troca o holder.
+function emptyDoc_() { return { rev: 0, holder: null, state: null }; }
+
+function stateView_(doc, since, now) {
+  var r = { ok: true, rev: doc.rev, holder: doc.holder, now: now };
+  if (since !== undefined && since !== null && Number(since) === doc.rev) r.unchanged = true;
+  else r.state = doc.state;
+  return r;
+}
+
+function stateTake_(doc, req, now) {
+  var d = { rev: doc.rev, holder: { id: String(req.clientId), name: String(req.name || 'Anotador').slice(0, 40), at: now }, state: doc.state };
+  var adopted = !!doc.state;
+  if (!doc.state && req.state) { d.state = req.state; d.rev = doc.rev + 1; }
+  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: d.holder, state: d.state, adopted: adopted, now: now } };
+}
+
+function notHolder_(doc, now) {
+  return { doc: doc, persist: false, resp: { ok: false, code: 'NOT_HOLDER', message: 'Outra pessoa assumiu a súmula.', rev: doc.rev, holder: doc.holder, state: doc.state, now: now } };
+}
+
+function statePut_(doc, req, now) {
+  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
+  if (!req.state) return { doc: doc, persist: false, resp: { ok: false, code: 'DADOS', message: 'Estado vazio.', now: now } };
+  var d = { rev: doc.rev + 1, holder: { id: doc.holder.id, name: req.name ? String(req.name).slice(0, 40) : doc.holder.name, at: now }, state: req.state };
+  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: d.holder, now: now } };
+}
+
+function stateBeat_(doc, req, now) {
+  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
+  var d = { rev: doc.rev, holder: { id: doc.holder.id, name: doc.holder.name, at: now }, state: doc.state };
+  return { doc: d, persist: false, resp: { ok: true, rev: d.rev, holder: d.holder, now: now } };
+}
+
+function stateRelease_(doc, req, now) {
+  if (!doc.holder || doc.holder.id !== String(req.clientId)) return notHolder_(doc, now);
+  var d = { rev: doc.rev, holder: null, state: doc.state };
+  return { doc: d, persist: true, resp: { ok: true, rev: d.rev, holder: null, now: now } };
+}
+
+/* ---------- estado: cache + aba oculta ---------- */
+function stateSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(CFG.TAB_ESTADO);
+  if (!sh) {
+    sh = ss.insertSheet(CFG.TAB_ESTADO);
+    sh.getRange('A1').setValue('Estado do dia da súmula (não edite). A1 = holder/versão, A2 = jogos.');
+    try { sh.hideSheet(); } catch (e) {}
+  }
+  return sh;
+}
+
+function loadDoc_() {
+  var raw = CacheService.getScriptCache().get('st');
+  if (raw) { try { return JSON.parse(raw); } catch (e) {} }
+  var sh = stateSheet_();
+  var doc = emptyDoc_();
+  var meta = sh.getRange('B1').getValue(), st = sh.getRange('A2').getValue();
+  if (meta) { try { var m = JSON.parse(meta); doc.rev = m.rev; doc.holder = m.holder; } catch (e) {} }
+  if (st) { try { doc.state = JSON.parse(st); } catch (e) {} }
+  return doc;
+}
+
+function saveDoc_(doc, persist) {
+  var json = JSON.stringify(doc);
+  if (json.length > 95000) fail_('GRANDE', 'O estado do dia ficou grande demais.');
+  CacheService.getScriptCache().put('st', json, 21600);
+  if (persist) {
+    var sh = stateSheet_();
+    var s = JSON.stringify(doc.state);
+    if (s.length > 49000) fail_('GRANDE', 'O estado do dia ficou grande demais.');
+    sh.getRange('B1').setValue(JSON.stringify({ rev: doc.rev, holder: doc.holder }));
+    sh.getRange('A2').setValue(s);
+  }
+}
+
+function stateGetGas_(req) {
+  return stateView_(loadDoc_(), req.since, Date.now());
+}
+
+function stateWriteGas_(req, who) {
+  if (!req.clientId) fail_('DADOS', 'clientId ausente.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var doc = loadDoc_(), now = Date.now(), r;
+    if (who && who.email && !req.name) req.name = who.email.split('@')[0];
+    if (req.action === 'take') r = stateTake_(doc, req, now);
+    else if (req.action === 'put') r = statePut_(doc, req, now);
+    else if (req.action === 'beat') r = stateBeat_(doc, req, now);
+    else r = stateRelease_(doc, req, now);
+    if (r.doc !== doc) saveDoc_(r.doc, r.persist);
+    return r.resp;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------- utilidades puras ---------- */
 function norm_(s) {
   return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
@@ -173,13 +287,13 @@ function validate_(req) {
     porTime[j.timeB] = (porTime[j.timeB] || 0) + j.golsB;
   });
   var atrib = {};
-  (req.lances || []).forEach(function (l) { if (l.autor) atrib[l.time] = (atrib[l.time] || 0) + 1; });
+  (req.lances || []).forEach(function (l) { if (l.autor && (l.tipo || 'Gol') === 'Gol') atrib[l.time] = (atrib[l.time] || 0) + 1; });
   Object.keys(atrib).forEach(function (t) {
     if (atrib[t] > (porTime[t] || 0)) fail_('DADOS', 'Há mais gols atribuídos do que gols do time ' + t + '.');
   });
 }
 
-/* ---------- gravação ---------- */
+/* ---------- gravação na planilha ---------- */
 function lastRowIn_(sheet, col) {
   var n = sheet.getMaxRows();
   var v = sheet.getRange(1, col, n, 1).getValues();
@@ -213,6 +327,13 @@ function ensureTab_(ss, name, header) {
     sh.setFrozenRows(1);
   }
   return sh;
+}
+
+function dropOwn_(sheet, iso) {
+  for (var r = sheet.getLastRow(); r >= 2; r--) {
+    var x = sheet.getRange(r, 1).getValue();
+    if (x instanceof Date && fmt_(x) === iso) sheet.deleteRow(r);
+  }
 }
 
 function append_(req) {
@@ -259,13 +380,13 @@ function append_(req) {
     sj.getRange(startJ, 1, rowsJ.length, 7).setValues(rowsJ);
     sj.getRange(startJ, 1).setNumberFormat('dd/MM/yyyy');
 
-    // Lances e goleiros (abas novas, só da súmula)
-    var sl = ensureTab_(ss, CFG.TAB_LANCES, ['Data', 'Jogo', 'Ordem', 'Time', 'Autor', 'Assistência', 'Placar (A-B)']);
+    // Lances (gols e faltas graves) e goleiros: abas novas, só da súmula
+    var sl = ensureTab_(ss, CFG.TAB_LANCES, ['Data', 'Jogo', 'Ordem', 'Time', 'Autor', 'Assistência', 'Placar (A-B)', 'Tipo']);
     var sg = ensureTab_(ss, CFG.TAB_GK, ['Data', 'Jogo', 'Time A', 'Goleiro A', 'Time B', 'Goleiro B']);
     if (req.replace) { dropOwn_(sl, req.date); dropOwn_(sg, req.date); }
     var sp = function (n) { return n ? (spell[norm_(n)] || String(n).trim()) : ''; };
-    var rowsL = (req.lances || []).map(function (l) { return [dateObj, l.jogo, l.ordem, l.time, sp(l.autor), sp(l.assist), l.placar]; });
-    if (rowsL.length) sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 7).setValues(rowsL);
+    var rowsL = (req.lances || []).map(function (l) { return [dateObj, l.jogo, l.ordem, l.time, sp(l.autor), sp(l.assist), l.placar || '', l.tipo || 'Gol']; });
+    if (rowsL.length) sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 8).setValues(rowsL);
     var rowsG = (req.goleiros || []).map(function (g) { return [dateObj, g.n, g.timeA, sp(g.gkA), g.timeB, sp(g.gkB)]; });
     if (rowsG.length) sg.getRange(sg.getLastRow() + 1, 1, rowsG.length, 6).setValues(rowsG);
     SpreadsheetApp.flush();
@@ -276,13 +397,11 @@ function append_(req) {
   }
 }
 
-function dropOwn_(sheet, iso) {
-  for (var r = sheet.getLastRow(); r >= 2; r--) {
-    var x = sheet.getRange(r, 1).getValue();
-    if (x instanceof Date && fmt_(x) === iso) sheet.deleteRow(r);
-  }
-}
-
 if (typeof module !== 'undefined') {
-  module.exports = { norm_: norm_, spellingMap_: spellingMap_, buildAtletaRows_: buildAtletaRows_, buildJogoRows_: buildJogoRows_, FORM: FORM, f_: f_, validate_: validate_ };
+  module.exports = {
+    norm_: norm_, spellingMap_: spellingMap_, buildAtletaRows_: buildAtletaRows_, buildJogoRows_: buildJogoRows_,
+    FORM: FORM, f_: f_, validate_: validate_,
+    emptyDoc_: emptyDoc_, stateView_: stateView_, stateTake_: stateTake_, statePut_: statePut_, stateBeat_: stateBeat_, stateRelease_: stateRelease_,
+    handle_: handle_, append_: append_, _setGlobals: function (g) { Object.keys(g).forEach(function (k) { global[k] = g[k]; }); }
+  };
 }
