@@ -497,49 +497,76 @@ function pdfTabela_(jogos) {
     .sort(function (x, y) { return y.pts - x.pts || (y.gp - y.gc) - (x.gp - x.gc) || y.gp - x.gp; });
 }
 
-function pdfHtml_(req) {
+var PDF_LOGO_URL = 'https://filubke.github.io/Aranha_Marrom/sumula/logo.jpg';
+
+function pdfLogo_() {
+  try {
+    var r = UrlFetchApp.fetch(PDF_LOGO_URL, { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) return '';
+    return 'data:image/jpeg;base64,' + Utilities.base64Encode(r.getContent());
+  } catch (e) { return ''; }
+}
+
+function pdfHtml_(req, logo) {
   var p = String(req.date).split('-'), dia = p[2] + '/' + p[1] + '/' + p[0];
+  var MARROM = '#4a2113', MARROM2 = '#6b2f16', OURO = '#c9954a', CREME = '#f7f1e7', LINHA = '#d9c9b0';
   var cor = function (t) { return PDF_COR[t] || ['#dddddd', '#222222']; };
-  var chip = function (t) { var c = cor(t); return '<span style="background:' + c[0] + ';color:' + c[1] + ';padding:1px 6px;border-radius:3px;border:1px solid #999">' + esc_(t) + '</span>'; };
+  var chip = function (t) { var c = cor(t); return '<span style="background:' + c[0] + ';color:' + c[1] + ';padding:2px 8px;border:1px solid #8a7560"><b>' + esc_(t) + '</b></span>'; };
   var h = '<html><head><meta charset="utf-8"><style>' +
-    'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#222}h1{font-size:17pt;margin:0 0 2px}h2{font-size:12pt;margin:14px 0 4px;border-bottom:2px solid #6b3a1e;padding-bottom:2px}' +
-    'table{border-collapse:collapse;width:100%;margin-bottom:6px}th,td{border:1px solid #bbb;padding:3px 5px;font-size:9.5pt;text-align:center}th{background:#f0e8de}td.l,th.l{text-align:left}' +
-    '.sub{color:#555;font-size:9pt}.gm{margin:0 0 5px;page-break-inside:avoid}.ev{font-size:9pt;color:#333;margin:0 0 0 14px}</style></head><body>';
-  h += '<h1>SÚMULA ' + dia + '</h1><div class="sub">Aranha Marrom · gerada pela súmula digital</div>';
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#2a1a10}' +
+    'h2{font-family:Georgia,serif;font-size:13pt;color:' + MARROM2 + ';margin:16px 0 6px;padding-bottom:3px;border-bottom:2px solid ' + OURO + '}' +
+    'table{border-collapse:collapse;width:100%;margin-bottom:8px}' +
+    'th{background:' + MARROM2 + ';color:#ffffff;border:1px solid ' + MARROM2 + ';padding:4px 5px;font-size:9pt;text-align:center}' +
+    'td{border:1px solid ' + LINHA + ';padding:4px 5px;font-size:9.5pt;text-align:center}' +
+    'td.l,th.l{text-align:left}.z{background:' + CREME + '}.sub{color:#7a6652;font-size:8.5pt}.ev{font-size:9pt;margin:1px 0}' +
+    '</style></head><body>';
+  // faixa de título
+  h += '<table style="margin-bottom:6px"><tr><td style="background:' + MARROM + ';border:1px solid ' + MARROM + ';padding:10px 12px;text-align:left;width:64px">' +
+    (logo ? '<img src="' + logo + '" width="56" height="56">' : '') + '</td>' +
+    '<td style="background:' + MARROM + ';border:1px solid ' + MARROM + ';padding:10px 6px;text-align:left"><div style="font-family:Georgia,serif;font-size:21pt;color:#fbf3e6"><b>Súmula Aranha Marrom</b></div>' +
+    '<div style="font-size:10.5pt;color:' + '#e0b366' + '">' + ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay()] + ' · ' + dia + '</div></td></tr>' +
+    '<tr><td colspan="2" style="background:' + OURO + ';border:1px solid ' + OURO + ';padding:0;font-size:3pt">&nbsp;</td></tr></table>';
   // tabela do dia
-  h += '<h2>Resultado do dia</h2><table><tr><th class="l">Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th></tr>';
-  pdfTabela_(req.jogos).forEach(function (r) { h += '<tr><td class="l">' + chip(r.t) + '</td><td>' + r.j + '</td><td>' + r.v + '</td><td>' + r.e + '</td><td>' + r.d + '</td><td>' + r.gp + '</td><td>' + r.gc + '</td><td>' + (r.gp - r.gc) + '</td><td><b>' + r.pts + '</b></td></tr>'; });
+  h += '<h2>Resultado do dia</h2><table><tr><th class="l">#</th><th class="l">Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th></tr>';
+  pdfTabela_(req.jogos).forEach(function (r, i) {
+    h += '<tr' + (i % 2 ? ' class="z"' : '') + '><td class="l"><b>' + (i + 1) + 'º</b></td><td class="l">' + chip(r.t) + '</td><td>' + r.j + '</td><td>' + r.v + '</td><td>' + r.e + '</td><td>' + r.d + '</td><td>' + r.gp + '</td><td>' + r.gc + '</td><td>' + (r.gp - r.gc) + '</td><td style="background:' + CREME + '"><b>' + r.pts + '</b></td></tr>';
+  });
   h += '</table>';
   // jogos
   var gks = {}; (req.goleiros || []).forEach(function (g) { gks[g.n] = g; });
   h += '<h2>Jogos</h2>';
   req.jogos.forEach(function (j) {
-    var g = gks[j.n] || {};
-    var L = [], R = [];
+    var g = gks[j.n] || {}, L = [], R = [];
     (req.lances || []).filter(function (l) { return l.jogo === j.n; }).forEach(function (l) {
-      var left = l.time === j.timeA, s;
-      if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">' + esc_(l.placar) + ' · Gol ' + (l.autor ? esc_(l.autor) : '(sem autor)') + (l.assist ? ' <span class="sub">assist. ' + esc_(l.assist) + '</span>' : '') + '</div>';
-      else s = '<div class="ev" style="color:' + (l.tipo === 'Agressão' ? '#b71c1c' : '#9a6b00') + '"><b>' + esc_(l.tipo) + '</b> · ' + esc_(l.autor) + '</div>';
+      var left = l.time === j.timeA, s, ic = (l.tipo === 'Agressão') ? '🟥' : '🟨';
+      if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">⚽ <b>' + (l.autor ? esc_(l.autor) : 'gol contra') + '</b>' + (l.assist ? ' <span class="sub">ass. ' + esc_(l.assist) + '</span>' : '') + '</div>';
+      else s = '<div class="ev" style="color:' + (l.tipo === 'Agressão' ? '#b71c1c' : '#8a5a00') + '">' + ic + ' <b>' + esc_(l.autor) + '</b> <span class="sub">' + esc_(l.tipo.toLowerCase()) + '</span></div>';
       (left ? L : R).push(s);
     });
-    h += '<div class="gm"><table style="margin:0"><tr><th style="width:50%;text-align:left">' + j.n + '. ' + chip(j.timeA) + '</th><th style="width:50%;text-align:right">' + chip(j.timeB) + '</th></tr>' +
-      '<tr><td colspan="2" style="font-size:12pt"><b>' + num_(j.golsA) + ' × ' + num_(j.golsB) + '</b></td></tr>' +
-      '<tr><td class="l" style="vertical-align:top">' + (L.join('') || '<span class="sub">—</span>') + '</td><td style="text-align:right;vertical-align:top">' + (R.join('') || '<span class="sub">—</span>') + '</td></tr>' +
-      ((g.gkA || g.gkB) ? '<tr><td class="l sub">Goleiro: ' + esc_(g.gkA || '—') + '</td><td class="sub" style="text-align:right">Goleiro: ' + esc_(g.gkB || '—') + '</td></tr>' : '') + '</table></div>';
+    var ca = cor(j.timeA), cb = cor(j.timeB);
+    h += '<table style="margin-bottom:10px;page-break-inside:avoid"><tr>' +
+      '<td style="width:42%;background:' + ca[0] + ';color:' + ca[1] + ';text-align:left;font-size:11pt"><b>' + esc_(j.timeA) + '</b></td>' +
+      '<td style="width:16%;background:' + MARROM + ';color:#e0b366;font-family:Georgia,serif;font-size:15pt;border-color:' + MARROM + '"><b>' + num_(j.golsA) + ' × ' + num_(j.golsB) + '</b></td>' +
+      '<td style="width:42%;background:' + cb[0] + ';color:' + cb[1] + ';text-align:right;font-size:11pt"><b>' + esc_(j.timeB) + '</b></td></tr>' +
+      '<tr><td class="l" style="vertical-align:top">' + (L.join('') || '<span class="sub">—</span>') + '</td><td class="sub" style="background:' + CREME + '">Jogo ' + j.n + '</td><td style="text-align:right;vertical-align:top">' + (R.join('') || '<span class="sub">—</span>') + '</td></tr>' +
+      ((g.gkA || g.gkB) ? '<tr><td class="l sub" style="background:' + CREME + '">🧤 ' + esc_(g.gkA || '—') + '</td><td style="background:' + CREME + '"></td><td class="sub" style="text-align:right;background:' + CREME + '">' + esc_(g.gkB || '—') + ' 🧤</td></tr>' : '') + '</table>';
   });
   // atletas
-  h += '<h2>Atletas</h2>';
+  h += '<h2>Pontuação dos atletas</h2>';
   var grupos = [], gi = {};
   req.atletas.forEach(function (a) { var k = a.ausente ? 'Faltou' : a.time; if (!(k in gi)) { gi[k] = grupos.length; grupos.push({ t: k, r: [] }); } grupos[gi[k]].r.push(a); });
   grupos.forEach(function (G) {
-    h += '<table><tr><th class="l" colspan="10">' + (PDF_COR[G.t] ? chip(G.t) : esc_(G.t)) + '</th></tr><tr><th class="l">Atleta</th><th>Pos</th><th>Gols</th><th>Assist.</th><th>Vit.</th><th>Emp.</th><th>Falta dura</th><th>Agressão</th><th>Bônus</th><th>Total</th></tr>';
-    G.r.forEach(function (a) {
-      var ps = a.pos === 'ZC' ? 'Zag' : (a.pos || '');
-      h += '<tr><td class="l">' + esc_(a.nome) + (a.ausente ? ' <span class="sub">(faltou)</span>' : '') + '</td><td>' + esc_(ps) + '</td><td>' + (a.ausente ? '' : num_(a.gols)) + '</td><td>' + (a.ausente ? '' : num_(a.ass)) + '</td><td>' + (a.ausente ? '' : num_(a.vit)) + '</td><td>' + (a.ausente ? '' : num_(a.emp)) + '</td><td>' + (a.falta ? a.falta : '') + '</td><td>' + (a.agr ? a.agr : '') + '</td><td>' + (a.bonus ? a.bonus : '') + '</td><td><b>' + (a.total != null ? a.total : '') + '</b></td></tr>';
+    var c = cor(G.t), isT = !!PDF_COR[G.t];
+    h += '<table style="page-break-inside:avoid"><tr><td class="l" colspan="10" style="background:' + (isT ? c[0] : MARROM) + ';color:' + (isT ? c[1] : '#ffffff') + ';font-size:10.5pt"><b>' + esc_(G.t) + '</b></td></tr>' +
+      '<tr><th class="l">Atleta</th><th>Pos</th><th>Gols</th><th>Ass.</th><th>Vit.</th><th>Emp.</th><th>Falta</th><th>Agr.</th><th>Bônus</th><th>Total</th></tr>';
+    G.r.forEach(function (a, i) {
+      var ps = a.pos === 'ZC' ? 'Zag' : (a.pos || ''), z = i % 2 ? ' class="z"' : '', au = a.ausente;
+      h += '<tr' + z + '><td class="l">' + esc_(a.nome) + (au ? ' <span class="sub">(faltou)</span>' : '') + '</td><td>' + esc_(ps) + '</td><td>' + (au ? '' : num_(a.gols)) + '</td><td>' + (au ? '' : num_(a.ass)) + '</td><td>' + (au ? '' : num_(a.vit)) + '</td><td>' + (au ? '' : num_(a.emp)) + '</td><td>' + (a.falta ? a.falta : '') + '</td><td>' + (a.agr ? a.agr : '') + '</td><td>' + (a.bonus ? '★' : '') + '</td><td style="background:' + CREME + '"><b>' + (a.total != null ? a.total : '') + '</b></td></tr>';
     });
     h += '</table>';
   });
-  h += '<div class="sub">Pontuação: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença (2, atraso 1, falta −5), zagueiro com jogo sem sofrer gol, falta dura −2, agressão −5, bônus 5 para o time de linha que ganhou todos os jogos e para o goleiro que sofreu menos gols.</div></body></html>';
+  h += '<div class="sub" style="margin-top:8px;border-top:1px solid ' + LINHA + ';padding-top:4px">Pontuação: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença 2 (atraso 1, falta −5), zagueiro com jogo sem sofrer gol 1, falta dura −2, agressão −5, bônus 5 (★) para o time de linha que ganhou todos os jogos e para o goleiro que sofreu menos gols.</div>' +
+    '<div class="sub" style="text-align:center;margin-top:6px">Aranha Marrom · súmula digital</div></body></html>';
   return h;
 }
 
@@ -548,7 +575,7 @@ function pdf_(req) {
   var props = PropertiesService.getScriptProperties();
   var folder = DriveApp.getFolderById(props.getProperty('PDF_FOLDER_ID') || CFG.PDF_FOLDER_ID);
   var name = pdfName_(req.date);
-  var blob = Utilities.newBlob(pdfHtml_(req), 'text/html', 'sumula.html').getAs('application/pdf').setName(name);
+  var blob = Utilities.newBlob(pdfHtml_(req, pdfLogo_()), 'text/html', 'sumula.html').getAs('application/pdf').setName(name);
   var it = folder.getFilesByName(name);
   while (it.hasNext()) it.next().setTrashed(true);   // só substitui o PDF digital do mesmo dia; os PDFs escaneados têm outro nome
   var file = folder.createFile(blob);

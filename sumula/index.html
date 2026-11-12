@@ -517,6 +517,7 @@ function viewResumo(){
   let h='';
   if(!S.games.length) return '<div class="card"><h2>Resumo</h2><p class="hint">Ainda não há jogos. Comece o dia na aba Times.</p></div>';
   pr.warn.forEach(w=>h+='<div class="warnbox">'+esc(w)+'</div>'); pr.bad.forEach(w=>h+='<div class="badbox">'+esc(w)+'</div>');
+  if(doneN) h+='<div class="row" style="margin-bottom:10px"><button class="btn-primary" style="flex:1 1 240px;min-height:52px" data-act="img">🖼️ Imagem do resultado para o grupo</button></div>';
   const order=S.teams.map((t,i)=>i).sort((a,b)=>(R[b].v*3+R[b].e)-(R[a].v*3+R[a].e)||(R[b].gf-R[b].gc)-(R[a].gf-R[a].gc)||R[b].gf-R[a].gf);
   h+='<div class="r2"><div class="rl"><div class="card"><h2>Tabela do dia</h2><div class="tbl"><table><tr><th>Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Pts</th></tr>'+order.map(i=>{const r=R[i];return '<tr><td class="dot2"><span class="u-'+S.teams[i].c+'"></span>'+TK[S.teams[i].c].n+'</td><td>'+r.gp+'</td><td>'+r.v+'</td><td>'+r.e+'</td><td>'+r.d+'</td><td>'+r.gf+'</td><td>'+r.gc+'</td><td>'+(r.gf-r.gc)+'</td><td><b>'+(r.v*3+r.e)+'</b></td></tr>';}).join('')+'</table></div></div>';
   /* jogos do dia */
@@ -576,6 +577,9 @@ function renderSheet(){
       const cand=pl;
       body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>n===x.by?'<button disabled class="selfb">'+esc(n)+'<small>fez o gol</small></button>':'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
     }
+  } else if(sh.type==='img'){
+    let cs=false; try{ cs=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[new File([''],'a.png',{type:'image/png'})]})); }catch(e){}
+    body='<h2>Imagem do resultado</h2>'+(sh.busy?'<p class="hint">Montando a imagem…</p>':'<div class="imgbox"><img alt="Resultado do dia" src="'+sh.url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"></div><p class="hint">Copie e cole no grupo. No celular, se não copiar, segure a imagem e escolha Copiar ou Compartilhar.</p><div class="foot">'+(cs?'<button class="btn-primary" data-act="imgshare">Compartilhar</button>':'')+'<button class="'+(cs?'':'btn-primary')+'" data-act="imgcopy">Copiar imagem</button><button data-act="close">Fechar</button></div>');
   } else if(sh.type==='take'){
     body=takeSheet();
   } else if(sh.type==='foul'){
@@ -701,6 +705,91 @@ async function testConn(){
 }
 function readCfg(){return {url:($('#cUrl')||{}).value?$('#cUrl').value.trim():'',key:($('#cKey')||{}).value||'',clientId:($('#cCli')||{}).value?$('#cCli').value.trim():'',name:($('#cNome')||{}).value?$('#cNome').value.trim():''};}
 
+/* ---------- imagem do resultado (para o grupo) ---------- */
+const IMGC={branco:['#efe6d6','#241309'],azul:['#6d94ff','#04102b'],marrom:['#9c4527','#ffffff'],amarelo:['#e6c447','#2a1d00']};
+function loadImg(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+async function makeResultImage(){
+  const W=1080, pad=44, DISP="'Fraunces',Georgia,serif", BODY="'IBM Plex Sans',system-ui,-apple-system,sans-serif";
+  const R=teamTable(), rows=compute(), done=S.games.map((g,i)=>({g,i})).filter(o=>o.g.done);
+  const logo=await loadImg((document.querySelector('.brand img')||{}).src||'');
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=7000; const x=cv.getContext('2d');
+  const C={bg:'#1b0f08',surf:'#2c1a10',surf2:'#3a2417',fg:'#fbf3e6',mut:'#d9c5ab',line:'rgba(243,232,216,.22)',acc:'#e0b366'};
+  const col=ti=>IMGC[TK[S.teams[ti].c].k]||['#ddd','#222'];
+  x.fillStyle=C.bg; x.fillRect(0,0,W,7000); x.textBaseline='alphabetic';
+  // cabeçalho
+  const hg=x.createLinearGradient(0,0,W,0); hg.addColorStop(0,'#4a2113'); hg.addColorStop(1,'#6b2f16'); x.fillStyle=hg; x.fillRect(0,0,W,170);
+  if(logo) x.drawImage(logo,pad,29,112,112);
+  x.fillStyle=C.fg; x.font='700 56px '+DISP; x.fillText('Súmula Aranha Marrom',pad+(logo?136:0),82);
+  const dt=S.date?new Date(S.date+'T12:00:00'):new Date();
+  x.fillStyle=C.mut; x.font='400 26px '+BODY; x.fillText(dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}),pad+(logo?136:0),124);
+  let y=170+40;
+  const title=s=>{ x.fillStyle=C.acc; x.font='700 34px '+DISP; x.fillText(s,pad,y+30); y+=54; };
+  const fit=(s,mw)=>{ while(s.length>1&&x.measureText(s).width>mw) s=s.slice(0,-2)+'…'; return s; };
+  // tabela do dia
+  title('Resultado do dia');
+  const order=S.teams.map((_,i)=>i).sort((a,b)=>(R[b].v*3+R[b].e)-(R[a].v*3+R[a].e)||(R[b].gf-R[b].gc)-(R[a].gf-R[a].gc)||R[b].gf-R[a].gf);
+  const cols=[['J',560],['V',620],['E',680],['D',740],['GP',810],['GC',880],['SG',950],['PTS',1030]];
+  x.fillStyle=C.mut; x.font='700 20px '+BODY; x.textAlign='right'; cols.forEach(c=>x.fillText(c[0],c[1],y+4)); x.textAlign='left'; y+=18;
+  order.forEach((ti,ri)=>{ const r=R[ti], c=col(ti), tk=TK[S.teams[ti].c];
+    x.fillStyle=C.surf; x.fillRect(pad,y,W-2*pad,62); x.fillStyle=c[0]; x.fillRect(pad,y,14,62);
+    x.fillStyle=C.mut; x.font='700 22px '+BODY; x.fillText((ri+1)+'º',pad+30,y+40);
+    x.fillStyle=C.fg; x.font='700 32px '+DISP; x.fillText(tk.n,pad+84,y+42);
+    x.font='500 26px '+BODY; x.textAlign='right'; [r.gp,r.v,r.e,r.d,r.gf,r.gc,r.gf-r.gc].forEach((v,k)=>x.fillText(String(v),cols[k][1],y+40));
+    x.fillStyle=C.acc; x.font='800 32px '+BODY; x.fillText(String(r.v*3+r.e),cols[7][1],y+42); x.textAlign='left'; y+=68; });
+  y+=26;
+  // jogos
+  title('Jogos');
+  done.forEach(({g,i})=>{
+    const sc=score(g), A=TK[S.teams[g.a].c], B=TK[S.teams[g.b].c], ca=col(g.a), cb=col(g.b);
+    const L=[],Rr=[]; let pa=0,pb=0;
+    g.goals.forEach(e=>{ const who=e.by==='*'?'gol contra':(e.by||'?'); const as=(e.as&&e.by!=='*')?'  ·  ass. '+e.as:''; (e.s===0?L:Rr).push({t:'⚽ '+who,s:as}); });
+    fl(g).forEach(f=>{ (f.s===0?L:Rr).push({t:(f.k==='a'?'🟥 ':'🟨 ')+f.by,s:f.k==='a'?'  ·  agressão':'  ·  falta dura'}); });
+    const n=Math.max(L.length,Rr.length), bh=84+n*38+(n?10:0)+44;
+    x.fillStyle=C.surf; x.fillRect(pad,y,W-2*pad,bh); x.fillStyle=ca[0]; x.fillRect(pad,y,10,84); x.fillStyle=cb[0]; x.fillRect(W-pad-10,y,10,84);
+    x.fillStyle=C.mut; x.font='700 22px '+BODY; x.fillText('Jogo '+(i+1),pad+26,y+30);
+    x.fillStyle=C.fg; x.font='700 32px '+DISP; x.fillText(A.n,pad+26,y+66); x.textAlign='right'; x.fillText(B.n,W-pad-26,y+66);
+    x.textAlign='center'; x.fillStyle=C.acc; x.font='800 54px '+BODY; x.fillText(sc[0]+'  ×  '+sc[1],W/2,y+64); x.textAlign='left';
+    let yy=y+84+10;
+    for(let k=0;k<n;k++){ yy+=34;
+      if(L[k]){ x.fillStyle=C.fg; x.font='600 25px '+BODY; x.fillText(fit(L[k].t,W/2-pad-30),pad+26,yy); const w=x.measureText(L[k].t).width; x.fillStyle=C.mut; x.font='400 20px '+BODY; if(w<W/2-pad-190) x.fillText(L[k].s,pad+26+w,yy); }
+      if(Rr[k]){ x.textAlign='right'; x.fillStyle=C.fg; x.font='600 25px '+BODY; const tx=fit(Rr[k].t,W/2-pad-30); x.fillText(tx,W-pad-26,yy); const w=x.measureText(tx).width; x.fillStyle=C.mut; x.font='400 20px '+BODY; if(w<W/2-pad-190) x.fillText(Rr[k].s,W-pad-26-w,yy); x.textAlign='left'; }
+      yy+=4; }
+    x.fillStyle=C.line; x.fillRect(pad+20,y+bh-44,W-2*pad-40,1);
+    x.fillStyle=C.mut; x.font='400 22px '+BODY; x.fillText('🧤 '+(g.gk[0]||'—'),pad+26,y+bh-14); x.textAlign='right'; x.fillText((g.gk[1]||'—')+' 🧤',W-pad-26,y+bh-14); x.textAlign='left';
+    y+=bh+16; });
+  y+=14;
+  // destaques
+  const top=rows.filter(r=>!r.ausente).slice().sort((a,b)=>b.total-a.total).slice(0,5);
+  if(top.length&&done.length){
+    title('Destaques do dia');
+    top.forEach((r,k)=>{ x.fillStyle=C.surf; x.fillRect(pad,y,W-2*pad,56); x.fillStyle=k===0?C.acc:C.mut; x.font='800 26px '+BODY; x.fillText((k+1)+'º',pad+20,y+37);
+      x.fillStyle=C.fg; x.font='600 28px '+BODY; x.fillText(r.nome,pad+84,y+38);
+      const det=[r.gols?r.gols+' gol'+(r.gols>1?'s':''):'',r.ass?r.ass+' ass.':'',r.gk?'goleiro':''].filter(Boolean).join(' · ');
+      x.fillStyle=C.mut; x.font='400 21px '+BODY; x.textAlign='right'; x.fillText(det,W-pad-130,y+36);
+      x.fillStyle=C.acc; x.font='800 30px '+BODY; x.fillText(r.total+' pts',W-pad-20,y+38); x.textAlign='left'; y+=62; });
+    y+=10;
+  }
+  const bon=champs().map((c,i)=>c?TK[S.teams[i].c].n:null).filter(Boolean);
+  const gkb=rows.filter(r=>r.gk&&r.bonus).map(r=>r.nome);
+  if(bon.length||gkb.length){ x.fillStyle=C.acc; x.font='600 24px '+BODY; x.fillText('🏆 Bônus: '+bon.concat(gkb.map(n=>n+' (goleiro menos vazado)')).join(' · '),pad,y+26); y+=48; }
+  x.fillStyle=C.mut; x.font='400 20px '+BODY; x.fillText('Súmula digital · Aranha Marrom',pad,y+30); y+=60;
+  const out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y); out.getContext('2d').drawImage(cv,0,0);
+  return out;
+}
+async function showResultImage(){
+  ui.sheet={type:'img',busy:true}; renderSheet();
+  try{ if(document.fonts&&document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const cv=await makeResultImage(); ui.imgCv=cv; ui.sheet={type:'img',url:cv.toDataURL('image/png')}; renderSheet();
+}
+function flashBtn(b,txt){ const o=b.textContent; b.textContent=txt; setTimeout(()=>{b.textContent=o;},1600); }
+function imgActions(act,b){
+  const cv=ui.imgCv; if(!cv) return;
+  cv.toBlob(bl=>{
+    if(act==='imgshare'){ try{ navigator.share({files:[new File([bl],'resultado-aranha-marrom.png',{type:'image/png'})],title:'Resultado Aranha Marrom'}).catch(()=>{}); }catch(e){ flashBtn(b,'Não deu'); } }
+    else { try{ navigator.clipboard.write([new ClipboardItem({'image/png':bl})]).then(()=>flashBtn(b,'Copiado ✓'),()=>flashBtn(b,'Segure a imagem')); }catch(e){ flashBtn(b,'Segure a imagem'); } }
+  });
+}
+
 /* ---------- sincronismo entre celulares ---------- */
 const ACCK='am-access';
 async function authFields(pl,cfg){ const ac=lsGet(ACCK); if(ac&&ac.code){ pl.code=ac.code; return; } const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||''; }
@@ -718,7 +807,7 @@ const SY={mode:'off',holder:null,rev:null,tk:null,net:true,busy:false,skew:0,bea
 const cid=(()=>{try{let v=localStorage.getItem('am-cid'); if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('am-cid',v);} return v;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
 const syOn=()=>!!CFG().url;
 const RO=()=>syOn()&&SY.mode!=='holder';
-const ROOK={accreq:1,accchk:1,tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,takeok:1,close:1,scrim:1,cfg:1,cfgsave:1,cfgtest:1,toastact:1};
+const ROOK={img:1,imgshare:1,imgcopy:1,accreq:1,accchk:1,tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,takeok:1,close:1,scrim:1,cfg:1,cfgsave:1,cfgtest:1,toastact:1};
 (function(){ if(!syOn()) return; SY.mode='viewer'; const o=lsGet(SYK); if(o&&o.tk){SY.tk=o.tk; SY.rev=o.rev; SY.mode='holder';} })();
 async function api(body){
   const u=CFG().url; body.clientId=cid;
@@ -817,6 +906,8 @@ document.addEventListener('click',function(e){
     case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s,k:d.k||''}; render(); } break;
     case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push(ui.sheet.k==='a'?{s:s,by:d.n,k:'a'}:{s:s,by:d.n}); ui.sheet=null; }); break; }
     case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
+    case 'img': showResultImage(); break;
+    case 'imgshare': case 'imgcopy': imgActions(a,e.target.closest('button')); break;
     case 'take': ui.sheet={type:'take'}; ui.acc=null; ui.accErr=null; render(); checkAcc(); break;
     case 'takeok': doTake(); break;
     case 'accreq': reqAccess(); break;
