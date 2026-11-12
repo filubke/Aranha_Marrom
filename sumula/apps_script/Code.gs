@@ -376,7 +376,9 @@ function lastRowIn_(sheet, col) {
   return 1;
 }
 
-function fmt_(d) { return Utilities.formatDate(d, CFG.TZ, 'yyyy-MM-dd'); }
+function fmt_(d) { return Utilities.formatDate(d, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd'); }
+// Data da planilha como número de série (dias desde 30/12/1899). Evita conversões de fuso entre o script e a planilha.
+function serial_(iso) { var p = String(iso).split('-'); return Math.round((Date.UTC(+p[0], +p[1] - 1, +p[2]) - Date.UTC(1899, 11, 30)) / 86400000); }
 
 // Linhas (de 2 até o fim dos dados) cuja coluna B (data preenchida) é igual à data.
 function findDateRows_(sheet, lastRow, iso) {
@@ -419,7 +421,7 @@ function append_(req) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sa = ss.getSheetByName(CFG.TAB_ATLETAS), sj = ss.getSheetByName(CFG.TAB_JOGOS);
     if (!sa || !sj) fail_('ABAS', 'Não encontrei as abas "' + CFG.TAB_ATLETAS + '" e "' + CFG.TAB_JOGOS + '".');
-    var dateObj = Utilities.parseDate(req.date, CFG.TZ, 'yyyy-MM-dd');
+    var dateObj = serial_(req.date);   // número de dias (sem fuso): evita a data cair um dia antes
 
     var lastA = lastRowIn_(sa, 5);   // coluna E = Atleta
     var lastJ = lastRowIn_(sj, 4);   // coluna D = Time A
@@ -446,7 +448,7 @@ function append_(req) {
     ensureRows_(sa, startA + rowsA.length - 1);
     try { sa.getRange(startA - 1, 1, 1, 17).copyTo(sa.getRange(startA, 1, rowsA.length, 17), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false); } catch (e1) {}
     sa.getRange(startA, 1, rowsA.length, 17).setValues(rowsA);
-    sa.getRange(startA, 1).setNumberFormat('dd/MM/yyyy');
+    sa.getRange(startA, 1, 1, 2).setNumberFormat('dd/MM/yyyy');
 
     // Jogos
     var rowsJ = buildJogoRows_(req.jogos, dateObj, startJ);
@@ -461,9 +463,9 @@ function append_(req) {
     if (req.replace) { dropOwn_(sl, req.date); dropOwn_(sg, req.date); }
     var sp = function (n) { return n ? (spell[norm_(n)] || String(n).trim()) : ''; };
     var rowsL = (req.lances || []).map(function (l) { return [dateObj, l.jogo, l.ordem, l.time, sp(l.autor), sp(l.assist), l.placar || '', l.tipo || 'Gol']; });
-    if (rowsL.length) sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 8).setValues(rowsL);
+    if (rowsL.length) { var rl = sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 8); rl.setValues(rowsL); sl.getRange(rl.getRow(), 1, rowsL.length, 1).setNumberFormat('dd/MM/yyyy'); }
     var rowsG = (req.goleiros || []).map(function (g) { return [dateObj, g.n, g.timeA, sp(g.gkA), g.timeB, sp(g.gkB)]; });
-    if (rowsG.length) sg.getRange(sg.getLastRow() + 1, 1, rowsG.length, 6).setValues(rowsG);
+    if (rowsG.length) { var rg = sg.getRange(sg.getLastRow() + 1, 1, rowsG.length, 6); rg.setValues(rowsG); sg.getRange(rg.getRow(), 1, rowsG.length, 1).setNumberFormat('dd/MM/yyyy'); }
     SpreadsheetApp.flush();
 
     return { ok: true, written: { atletas: rowsA.length, jogos: rowsJ.length, lances: rowsL.length }, rows: { atletas2026: startA, jogos: startJ } };

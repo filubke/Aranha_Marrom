@@ -129,6 +129,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .ev .sc2{font-variant-numeric:tabular-nums;font-weight:700;min-width:44px;color:var(--muted)}
 .ev .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid var(--line)}
 .ev .tx{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.logcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:14px;align-items:start}.lcol{display:grid;gap:6px;min-width:0}.logcols .ev{display:block;min-height:0;padding:7px 10px;position:relative}.logcols .ev .sc2{display:block;min-width:0;font-size:12px;line-height:1.2}.logcols .ev .tx{display:block}.lcol.r .ev{text-align:right}.logcols .fev{padding-right:38px}.logcols .fx{position:absolute;right:3px;top:3px;min-height:32px;min-width:32px}.lcol.r .fev{padding-right:10px;padding-left:38px}.lcol.r .fx{left:3px;right:auto}.row2 button{font-size:13px}.ev.fev{border:1px solid var(--line);border-radius:10px;background:var(--surface)}.ev .sc2{white-space:nowrap}.selfb{opacity:.45}
 .ev .tx small{display:block;color:var(--muted);font-size:13.5px}
 .ev.pend{background:var(--warn-bg);border-color:var(--warn)}
 .ev.pend .tx small{color:var(--warn)}
@@ -298,7 +299,7 @@ function autoGk(g){
   }
   g.gk=chosen; g.gkAuto=true;
 }
-function sidePlayers(g,s){const t=S.teams[s?g.b:g.a]; const l=t.players.map(p=>p.n); if(g.gk[s]&&l.indexOf(g.gk[s])<0) l.push(g.gk[s]); return l;}
+function sidePlayers(g,s){const t=S.teams[s?g.b:g.a]; const l=t.players.map(p=>p.n); if(g.gk[s]&&l.indexOf(g.gk[s])<0) l.push(g.gk[s]); return l.sort((x,y)=>x.localeCompare(y,'pt-BR',{sensitivity:'base'}));}
 function goalStats(){const m={}; S.games.forEach(g=>{ if(!g.done) return; g.goals.forEach(x=>{ if(x.by&&x.by!=='*'){(m[x.by]=m[x.by]||{g:0,a:0}).g++;} if(x.as){(m[x.as]=m[x.as]||{g:0,a:0}).a++;} }); }); return m;}
 function liveGoalCount(name){let c=0; S.games.forEach(g=>g.goals.forEach(x=>{if(x.by===name) c++;})); return c;}
 function teamTable(){
@@ -488,12 +489,13 @@ function viewJogo(){
   const ci=S.cur;
   h+='<div class="gh"><h2>Jogo '+(ci+1)+' <span class="hint" style="font-family:var(--body);font-weight:400">de '+totalShow+(g.done?' · encerrado':'')+'</span></h2></div>';
   h+='<div class="board">'+sideHTML(g,0)+sideHTML(g,1)+'</div>';
-  if(g.goals.length){
-    let pa=0,pb=0;
-    h+='<div class="log">'+g.goals.map((x,k)=>{ x.s===0?pa++:pb++; const e=evText(g,x),pe=x.by===null||(x.by!=='*'&&x.as===null);
-      return '<button class="ev'+(pe?' pend':'')+'" data-act="evedit" data-k="'+k+'"'+(g.done?' disabled':'')+'><span class="sc2">'+pa+'–'+pb+'</span><span class="dot u-'+S.teams[x.s?g.b:g.a].c+'"></span><span class="tx">⚽ '+esc(e.who)+(e.as?'<small>'+esc(e.as)+'</small>':'')+'</span></button>';}).join('')+'</div>';
+  if(g.goals.length||fl(g).length){
+    let pa=0,pb=0; const L=[],R=[], dis=g.done?' disabled':'';
+    g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; const e=evText(g,x),pe=x.by===null||(x.by!=='*'&&x.as===null);
+      (x.s===0?L:R).push('<button class="ev'+(pe?' pend':'')+'" data-act="evedit" data-k="'+k+'"'+dis+'><span class="sc2">'+pa+'–'+pb+'</span><span class="tx"><b>⚽ '+esc(e.who)+'</b>'+(e.as?'<small>'+(x.as?'🅰️ ':'')+esc(e.as)+'</small>':'')+'</span></button>'); });
+    fl(g).forEach((f,k)=>{ (f.s===0?L:R).push('<div class="ev fev"><span class="sc2">'+FK(f).ic+'</span><span class="tx"><b>'+esc(f.by)+'</b><small>'+FK(f).n+' · '+FK(f).pt+'</small></span><button class="fx" data-act="fouldel" data-k="'+k+'" aria-label="Remover '+FK(f).n.toLowerCase()+' de '+esc(f.by)+'"'+dis+'>×</button></div>'); });
+    h+='<div class="logcols"><div class="lcol">'+L.join('')+'</div><div class="lcol r">'+R.join('')+'</div></div>';
   } else h+='<p class="hint" style="margin-bottom:14px">Sem gols ainda. Toque em “+ GOL” no time que marcou.</p>';
-  if(fl(g).length) h+='<div class="log fouls">'+fl(g).map((f,k)=>'<div class="ev"><span class="sc2">'+FK(f).ic+'</span><span class="dot u-'+S.teams[f.s?g.b:g.a].c+'"></span><span class="tx">'+FK(f).n+': '+esc(f.by)+'<small>'+FK(f).pt+'</small></span><button class="fx" data-act="fouldel" data-k="'+k+'" aria-label="Remover '+FK(f).n.toLowerCase()+' de '+esc(f.by)+'"'+(g.done?' disabled':'')+'>×</button></div>').join('')+'</div>';
   h+='<div class="card"><details><summary>Opções do jogo</summary><div class="row" style="margin:6px 0">'+
     (!g.goals.length&&!g.done?'<button data-act="pair">Trocar os times deste jogo</button>':'')+
     (S.cur===0&&S.teams.length===3&&!g.goals.length&&!g.done?'<button data-act="redraw">🎲 Sortear 1º jogo de novo</button>':'')+
@@ -571,8 +573,8 @@ function renderSheet(){
     if(sh.type==='by'){
       body='<h2>Quem fez o gol do '+T0.n+'?</h2><div class="sub">Gol '+(sh.k+1)+' do jogo '+(sh.gi+1)+'. O placar já foi somado; o autor pode ficar para depois.</div><div class="pgrid">'+pl.map(n=>'<button data-act="by" data-n="'+esc(n)+'">'+esc(n)+(liveGoalCount(n)?'<small>⚽ '+liveGoalCount(n)+' hoje</small>':'')+'</button>').join('')+'<button class="alt" data-act="by" data-n="*">Gol contra / sem autor</button></div><div class="foot"><button data-act="later">Definir depois</button></div>';
     } else {
-      const cand=pl.filter(n=>n!==x.by);
-      body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
+      const cand=pl;
+      body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>n===x.by?'<button disabled class="selfb">'+esc(n)+'<small>fez o gol</small></button>':'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
     }
   } else if(sh.type==='take'){
     body=takeSheet();
