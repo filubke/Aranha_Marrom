@@ -185,7 +185,7 @@ td.dot2 span{display:inline-block;width:10px;height:10px;border-radius:50%;margi
 .foulb{width:100%;min-height:40px;margin-top:6px;background:#f5d000;color:#2a170c;border-color:#c9a800;font-weight:700}.foulb:disabled{opacity:.45}
 .fx{min-height:36px;min-width:36px;padding:0}
 .sech{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;padding:0;min-height:44px;color:var(--fg);text-align:left}.sech h2{margin:0}
-.sy{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:14px}.sy.me{background:var(--ok-bg,var(--surface-2))}.sy span{min-width:0}
+.sy.off{background:#8a2a1c!important;color:#fff!important}.sy{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:14px}.sy.me{background:var(--ok-bg,var(--surface-2))}.sy span{min-width:0}
 body.ro .gol,body.ro .foulb,body.ro .minus,body.ro .gkb,body.ro .addp,body.ro [data-act=start],body.ro .pn,body.ro .tag{opacity:.45}
 
 .r2{display:block}
@@ -568,11 +568,17 @@ function renderSheet(){
   const sh=ui.sheet, el=$('#over');
   if(!sh){el.innerHTML='';return;}
   let body='';
-  if(sh.type==='by'||sh.type==='as'){
+  if(sh.type==='ev'){
+    const g=S.games[sh.gi], x=g.goals[sh.k]; if(!x){ body=''; } else {
+    const T0=TK[S.teams[x.s?g.b:g.a].c], e=evText(g,x);
+    body='<h2>Gol do '+T0.n+'</h2><div class="sub"><b>'+esc(e.who)+'</b>'+(e.as?' · '+(x.as?'assistência de ':'')+esc(e.as):'')+'</div><div class="pgrid" style="grid-template-columns:1fr">'+
+      '<button data-act="gby" data-k="'+sh.k+'">Trocar autor</button>'+(x.by!=='*'?'<button data-act="gas" data-k="'+sh.k+'">Trocar assistência</button>':'')+
+      '<button class="alt" style="color:#c0392b" data-act="gdel" data-k="'+sh.k+'">Apagar este gol (o placar diminui)</button></div><div class="foot"><button data-act="close">Cancelar</button></div>'; }
+  } else if(sh.type==='by'||sh.type==='as'){
     const g=S.games[sh.gi], x=g.goals[sh.k], T0=TK[S.teams[x.s?g.b:g.a].c];
     const pl=sidePlayers(g,x.s);
     if(sh.type==='by'){
-      body='<h2>Quem fez o gol do '+T0.n+'?</h2><div class="sub">Gol '+(sh.k+1)+' do jogo '+(sh.gi+1)+'. O placar já foi somado; o autor pode ficar para depois.</div><div class="pgrid">'+pl.map(n=>'<button data-act="by" data-n="'+esc(n)+'">'+esc(n)+(liveGoalCount(n)?'<small>⚽ '+liveGoalCount(n)+' hoje</small>':'')+'</button>').join('')+'<button class="alt" data-act="by" data-n="*">Gol contra / sem autor</button></div><div class="foot"><button data-act="later">Definir depois</button></div>';
+      body='<h2>Quem fez o gol do '+T0.n+'?</h2><div class="sub">Gol '+(sh.k+1)+' do jogo '+(sh.gi+1)+'. O placar já foi somado; o autor pode ficar para depois.</div><div class="pgrid">'+pl.map(n=>'<button data-act="by" data-n="'+esc(n)+'">'+esc(n)+(liveGoalCount(n)?'<small>⚽ '+liveGoalCount(n)+' hoje</small>':'')+'</button>').join('')+'<button class="alt" data-act="by" data-n="*">Gol contra / sem autor</button></div><div class="foot"><button data-act="later">Definir depois</button><button style="color:#c0392b" data-act="gdel" data-k="'+sh.k+'">Apagar gol</button></div>';
     } else {
       const cand=pl;
       body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>n===x.by?'<button disabled class="selfb">'+esc(n)+'<small>fez o gol</small></button>':'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
@@ -838,14 +844,14 @@ function lost(j){
   showToast((SY.holder&&SY.holder.name?SY.holder.name:'Outra pessoa')+' assumiu a súmula. Agora você só visualiza.'); render();
 }
 let pushT=null;
-function schedPush(){ clearTimeout(pushT); pushT=setTimeout(doPush,700); }
+function schedPush(){ SY.v=(SY.v||0)+1; SY.dirty=true; clearTimeout(pushT); pushT=setTimeout(doPush,700); }
 async function doPush(){
   if(SY.mode!=='holder') return;
   if(SY.busy){ schedPush(); return; }
   SY.busy=true;
   try{
-    const j=await api({action:'put',tk:SY.tk,state:S});
-    if(j.ok){ SY.rev=j.rev; SY.holder=j.holder; lsSet(SYK,{tk:SY.tk,rev:SY.rev}); }
+    const v0=SY.v||0; const j=await api({action:'put',tk:SY.tk,state:S});
+    if(j.ok){ if((SY.v||0)===v0) SY.dirty=false; SY.rev=j.rev; SY.holder=j.holder; lsSet(SYK,{tk:SY.tk,rev:SY.rev}); }
     else if(j.code==='NOT_HOLDER'){ SY.busy=false; lost(j); return; }
   }catch(e){ clearTimeout(pushT); pushT=setTimeout(doPush,5000); }
   SY.busy=false; renderSync();
@@ -870,10 +876,13 @@ function renderSync(){
   const el=$('#syncbar'); if(!el) return; document.body.classList.toggle('ro',RO());
   if(!syOn()){ el.innerHTML=''; return; }
   let h;
-  if(SY.mode==='holder') h='<div class="sy me"><span>✏️ <b>Você está anotando</b>'+(SY.net?'':' · sem conexão, tentando de novo')+'</span></div>';
+  if(SY.mode==='holder'&&!SY.net) h='<div class="sy off"><span>⚠️ <b>Sem conexão</b> — o que você anotar fica salvo neste aparelho e vai para os outros quando a internet voltar. <b>Não passe o controle antes disso.</b></span></div>';
+  else if(SY.mode==='holder') h='<div class="sy me"><span>✏️ <b>Você está anotando</b>'+(SY.dirty?' · enviando…':' · tudo salvo ✓')+'</span></div>';
   else h='<div class="sy"><span>👁 <b>Só visualização</b> · '+(SY.holder?esc(SY.holder.name)+' anota ('+ageTxt(SY.holder)+')':'ninguém anotando')+(SY.net?'':' · sem conexão')+'</span><button class="mini btn-primary" data-act="take">Assumir</button></div>';
   el.innerHTML=h;
 }
+window.addEventListener('online',function(){ if(syOn()&&SY.mode==='holder'){ SY.net=true; schedPush(); } renderSync(); });
+window.addEventListener('offline',function(){ SY.net=false; renderSync(); });
 function takeSheet(){
   const c=CFG(), fresh=SY.holder&&SY.holder.id!==cid&&(Date.now()+SY.skew-SY.holder.at)<60000;
   const nm=ui.tname!=null?ui.tname:(c.name||(ui.email||'').split('@')[0]);
@@ -948,7 +957,10 @@ document.addEventListener('click',function(e){
     case 'gsel': S.cur=+d.i; save(); render(); break;
     case 'gol': addGoal(+d.s); break;
     case 'gmin': removeLastGoal(+d.s); break;
-    case 'evedit': { const g=S.games[S.cur]; const k=+d.k; ui.sheet={type:g.goals[k].by===null?'by':'as',gi:S.cur,k:k}; if(g.goals[k].by!==null&&g.goals[k].by!=='*') ui.sheet.type=g.goals[k].as===null?'as':'by'; if(g.goals[k].by==='*') ui.sheet.type='by'; render(); break; }
+    case 'gdel': { const g=S.games[S.cur], k=+d.k; if(g&&!g.done&&g.goals[k]) commit(()=>{ g.goals.splice(k,1); ui.sheet=null; }); break; }
+    case 'gby': { ui.sheet={type:'by',gi:S.cur,k:+d.k}; render(); break; }
+    case 'gas': { ui.sheet={type:'as',gi:S.cur,k:+d.k}; render(); break; }
+    case 'evedit': { const g=S.games[S.cur]; const k=+d.k; const x0=g.goals[k]; if(x0.by!==null&&(x0.by==='*'||x0.as!==null)){ ui.sheet={type:'ev',gi:S.cur,k:k}; render(); break; } ui.sheet={type:g.goals[k].by===null?'by':'as',gi:S.cur,k:k}; if(g.goals[k].by!==null&&g.goals[k].by!=='*') ui.sheet.type=g.goals[k].as===null?'as':'by'; if(g.goals[k].by==='*') ui.sheet.type='by'; render(); break; }
     case 'by': pickBy(d.n); break;
     case 'as': pickAs(d.n); break;
     case 'backby': ui.sheet.type='by'; render(); break;
