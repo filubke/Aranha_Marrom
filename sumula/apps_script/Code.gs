@@ -11,6 +11,8 @@
  *      GOOGLE_CLIENT_ID   ID do cliente OAuth (tipo "Aplicativo da Web")
  *      ALLOWED_EMAILS     e-mails de quem pode anotar, separados por vírgula
  *    Com GOOGLE_CLIENT_ID preenchido, a chave deixa de valer e só anota quem estiver na lista.
+ * 2b. No editor, escolha a função "autorizar" no seletor ao lado de "Executar" e clique em Executar. Aceite as permissões
+ *    (planilha, Drive, internet). Faça isso ANTES de implantar.
  * 3. Implantar > Nova implantação > tipo "App da Web":
  *      Executar como: Eu     |     Quem tem acesso: Qualquer pessoa
  *    Autorize quando o Google pedir. Copie o endereço que termina em /exec.
@@ -105,6 +107,15 @@ function log_(who, evento, detalhe) {
 }
 
 /* ---------- acesso ---------- */
+/** Rode UMA vez no editor (menu "Executar") para o Google pedir todas as permissões de uma vez: planilha, Drive e internet. */
+function autorizar() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  DriveApp.getFolderById(CFG.PDF_FOLDER_ID).getName();
+  UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  accSheet_();
+  Logger.log('Permissões ok para a planilha "' + ss.getName() + '". Agora implante uma nova versão do app da web.');
+}
+
 /* ---------- pedido de acesso (sem Google Cloud): a pessoa pede, o administrador libera marcando a caixa na aba "Acessos" ---------- */
 var ACC_HEAD = ['Nome', 'Código', 'Pedido em', 'Liberado', 'Último uso'];
 function accSheet_() { return ensureTab_(SpreadsheetApp.getActiveSpreadsheet(), 'Acessos', ACC_HEAD); }

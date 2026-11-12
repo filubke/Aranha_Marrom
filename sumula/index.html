@@ -248,7 +248,7 @@ const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLo
 const BYN={}; ROSTER.forEach(r=>BYN[norm(r.n)]=r);
 const canon=n=>{const t=String(n||'').trim().replace(/\s+/g,' '); const r=BYN[norm(t)]; return r?r.n:t;};
 const LS='sumula-am-v1', CFGK='sumula-am-cfg-v1', SYK='am-sync-v1';
-function CFG(){const c=lsGet(CFGK)||{}, d=window.AM_CONFIG||{}; return {url:c.url||d.SCRIPT_URL||'',key:c.key||'',clientId:c.clientId||d.CLIENT_ID||'',name:c.name||''};}
+function CFG(){const c=lsGet(CFGK)||{}, d=window.AM_CONFIG||{}; return {url:c.url||d.SCRIPT_URL||'',key:c.key||'',clientId:d.CLIENT_ID||'',name:c.name||''};}
 const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
 
@@ -664,7 +664,7 @@ async function savePdf(){
     const pl=buildPayload(); pl.action='pdf'; await authFields(pl,cfg);
     const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)}); const j=await r.json();
     ui.pdf=j.ok?{state:'ok',name:j.name,url:j.url}:{state:'error',msg:(j.message||'O script recusou gerar o PDF.')+(j.code?' ('+j.code+')':'')};
-  }catch(e){ ui.pdf={state:'error',msg:/Google/.test(e.message)?e.message:'Sem conexão com o script. Tente de novo quando houver internet.'}; }
+  }catch(e){ ui.pdf={state:'error',msg:/Google/.test(e.message)?e.message:netMsg(e)}; }
   render();
 }
 async function send(replace){
@@ -692,19 +692,26 @@ function initGoogle(){
 async function testConn(){
   const cfg=readCfg(); const m=$('#cmsg'); if(!cfg.url){m.textContent='Informe o endereço do script.';return;}
   m.textContent='Testando…';
-  try{ const pl={action:'ping'}; const tok=cfg.clientId?ui.idToken:null; if(tok) pl.idToken=tok; else pl.key=cfg.key||'';
-    const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)}); const j=await r.json();
-    m.textContent=j.ok?'Conexão ok'+(j.sheet?' com a planilha “'+j.sheet+'”.':'.'):('Recusado: '+(j.message||j.code)); }
-  catch(e){m.textContent='Não consegui falar com o script. Confira o endereço e se a implantação está como “Qualquer pessoa”.';}
+  try{ const pl={action:'ping'}; const ac=lsGet(ACCK); if(ac&&ac.code) pl.code=ac.code; else { const tok=cfg.clientId?ui.idToken:null; if(tok) pl.idToken=tok; else pl.key=cfg.key||''; }
+    const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pl)}); const tx=await r.text(); let j; try{j=JSON.parse(tx);}catch(e2){ const er=new Error('x'); er.kind=/accounts\.google|ServiceLogin|signin|Sign in/i.test(tx)?'LOGIN':'FORMATO'; throw er; }
+    m.textContent=j.ok?'Conexão ok'+(j.sheet?' com a planilha “'+j.sheet+'”.':'.')+(j.edit?' Você pode anotar.':' (sem permissão para anotar ainda'+(j.why?': '+j.why:'')+').'):('Recusado: '+(j.message||j.code)); }
+  catch(e){m.textContent=netMsg(e);}
 }
 function readCfg(){return {url:($('#cUrl')||{}).value?$('#cUrl').value.trim():'',key:($('#cKey')||{}).value||'',clientId:($('#cCli')||{}).value?$('#cCli').value.trim():'',name:($('#cNome')||{}).value?$('#cNome').value.trim():''};}
 
 /* ---------- sincronismo entre celulares ---------- */
 const ACCK='am-access';
-async function authFields(pl,cfg){ const ac=lsGet(ACCK); if(ac&&ac.code){ pl.code=ac.code; return; } await authFields(pl,cfg); }
+async function authFields(pl,cfg){ const ac=lsGet(ACCK); if(ac&&ac.code){ pl.code=ac.code; return; } const tok=await getToken(cfg); if(tok) pl.idToken=tok; else pl.key=cfg.key||''; }
+function netMsg(e){
+  const k=e&&e.kind||'';
+  if(k==='LOGIN') return 'O Google pediu login ao abrir o script. Na implantação, “Quem tem acesso” precisa ser “Qualquer pessoa” (não “Qualquer pessoa com conta Google”).';
+  if(k==='FORMATO') return 'O endereço respondeu, mas não é o script da súmula. Confira o endereço /exec e se a implantação usa a versão nova do código.';
+  if(k==='REDE'||/Failed to fetch|NetworkError/i.test(e&&e.message||'')) return 'Não consegui falar com o script: sem internet, endereço errado ou implantação bloqueada.';
+  return (e&&e.message)||'Erro ao falar com o script.';
+}
 async function checkAcc(){ const ac=lsGet(ACCK); if(!ac||!ac.code||!syOn()) return; try{ const j=await api({action:'access_status',code:ac.code}); if(j.ok){ const old=ui.acc; ui.acc=j.status; if(j.status==='desconhecido'){ try{localStorage.removeItem(ACCK);}catch(e){} } if(old!==ui.acc&&ui.sheet&&ui.sheet.type==='take') renderSheet(); } }catch(e){} }
 async function reqAccess(){ const nm=(($('#tName')||{}).value||'').trim(); if(!nm){ showToast('Escreva seu nome para pedir acesso.'); return; } ui.tname=nm;
-  try{ const j=await api({action:'access_request',name:nm}); if(j.ok){ lsSet(ACCK,{code:j.code,name:j.name}); ui.acc='pendente'; renderSheet(); } else showToast(j.message||'Não consegui enviar o pedido.'); }catch(e){ showToast('Sem conexão com o script. Tente de novo.'); } }
+  try{ const j=await api({action:'access_request',name:nm}); if(j.ok){ lsSet(ACCK,{code:j.code,name:j.name}); ui.acc='pendente'; ui.accErr=null; renderSheet(); } else { ui.accErr=(j.message||'O script recusou o pedido.')+(j.code?' ('+j.code+')':'')+(/desconhecida|ACAO|BAD/i.test((j.message||'')+(j.code||''))?' Provável causa: a implantação ainda está na versão antiga do código.':''); renderSheet(); } }catch(e){ ui.accErr=netMsg(e); renderSheet(); } }
 const SY={mode:'off',holder:null,rev:null,tk:null,net:true,busy:false,skew:0,beat:0,retry:null};
 const cid=(()=>{try{let v=localStorage.getItem('am-cid'); if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('am-cid',v);} return v;}catch(e){return 'x'+Math.random().toString(36).slice(2);}})();
 const syOn=()=>!!CFG().url;
@@ -713,8 +720,11 @@ const ROOK={accreq:1,accchk:1,tab:1,tgame:1,gall:1,tgrp:1,call:1,gsel:1,take:1,t
 (function(){ if(!syOn()) return; SY.mode='viewer'; const o=lsGet(SYK); if(o&&o.tk){SY.tk=o.tk; SY.rev=o.rev; SY.mode='holder';} })();
 async function api(body){
   const u=CFG().url; body.clientId=cid;
-  try{ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}); const j=await r.json(); SY.net=true; if(j&&j.now) SY.skew=j.now-Date.now(); return j; }
-  catch(e){ SY.net=false; throw e; }
+  let tx;
+  try{ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}); tx=await r.text(); }
+  catch(e){ SY.net=false; const er=new Error('REDE'); er.kind='REDE'; throw er; }
+  let j; try{ j=JSON.parse(tx); }catch(e){ SY.net=false; const er=new Error(/accounts\.google|ServiceLogin|signin|Sign in/i.test(tx)?'LOGIN':'FORMATO'); er.kind=er.message; throw er; }
+  SY.net=true; if(j&&j.now) SY.skew=j.now-Date.now(); return j;
 }
 function adopt(st){
   if(!st||st.v!==1) return; const tab=S.tab; S=st; if(!S.absent) S.absent=[]; S.tab=tab; undo.length=0; lsSet(LS,S);
@@ -773,10 +783,9 @@ function takeSheet(){
     if(ui.acc==='liberado'){ b+='<div class="okbox" style="margin-top:10px">Acesso liberado para <b>'+esc(ac.name)+'</b>.</div>'; can=true; }
     else b+='<div class="warnbox" style="margin-top:10px">Pedido enviado como <b>'+esc(ac.name)+'</b>. Aguarde o administrador liberar seu nome na aba <b>Acessos</b> da planilha. Esta tela confere sozinha.<div class="row" style="margin-top:8px"><button data-act="accchk">Conferir agora</button></div></div>';
   } else if(c.key){ b+='<div class="okbox" style="margin-top:10px">Chave de acesso informada.</div>'; can=true; }
-  else if(c.clientId&&ui.idToken){ b+='<div class="okbox" style="margin-top:10px">Conectado com Google.</div>'; can=true; }
   else {
     b+='<div class="sub" style="margin-top:10px">Para anotar é preciso ter o acesso liberado pelo administrador. Escreva seu nome e peça; depois é só esperar a liberação.</div><div class="row" style="margin-top:6px"><button class="btn-primary" data-act="accreq">Pedir acesso</button></div>';
-    if(c.clientId) b+='<div class="sub" style="margin-top:10px">Ou entre com Google:</div><div id="gbtn2"></div><div class="hint" id="gstat"></div>';
+    if(ui.accErr) b+='<div class="badbox" style="margin-top:8px">'+esc(ui.accErr)+'</div>';
   }
   b+='<div class="foot"><button data-act="close">Cancelar</button><button class="btn-primary" data-act="takeok"'+(can?'':' disabled')+'>Assumir agora</button></div>';
   return b;
@@ -791,7 +800,7 @@ async function doTake(){
     SY.mode='holder'; SY.tk=j.tk; SY.holder=j.holder; SY.rev=j.rev; SY.beat=Date.now(); lsSet(SYK,{tk:j.tk,rev:j.rev});
     if(j.adopted&&j.state) adopt(j.state);
     ui.sheet=null; showToast(j.adopted?'Você assumiu. Estado do dia carregado.':'Você assumiu a súmula.'); render();
-  }catch(e){ showToast(/Google/.test(e.message)?e.message:'Sem conexão com o script. Tente de novo.'); }
+  }catch(e){ showToast(/Google/.test(e.message)?e.message:netMsg(e)); }
 }
 setInterval(syTick,6000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) syTick(); });
@@ -806,7 +815,7 @@ document.addEventListener('click',function(e){
     case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s,k:d.k||''}; render(); } break;
     case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push(ui.sheet.k==='a'?{s:s,by:d.n,k:'a'}:{s:s,by:d.n}); ui.sheet=null; }); break; }
     case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
-    case 'take': ui.sheet={type:'take'}; ui.acc=null; render(); checkAcc(); break;
+    case 'take': ui.sheet={type:'take'}; ui.acc=null; ui.accErr=null; render(); checkAcc(); break;
     case 'takeok': doTake(); break;
     case 'accreq': reqAccess(); break;
     case 'accchk': checkAcc(); break;
