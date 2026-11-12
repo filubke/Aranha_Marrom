@@ -88,7 +88,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .plist li{padding:0 8px;border-bottom:1px solid var(--line)}
 .plist li:last-child{border-bottom:0}
 .pl{display:flex;align-items:center;gap:8px;min-height:46px}
-.pn{flex:1 1 auto;text-align:left;border:0;background:transparent;padding:6px 4px;overflow-wrap:anywhere}
+.pp{display:inline-block;font-size:11px;font-weight:700;line-height:1;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 5px;margin-left:4px;vertical-align:middle}.pn{flex:1 1 auto;text-align:left;border:0;background:transparent;padding:6px 4px;overflow-wrap:anywhere}
 .tag{min-width:44px;min-height:34px;padding:0 8px;font-size:13px;font-weight:700;color:var(--muted)}
 .tag.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .pact{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 8px}
@@ -310,6 +310,7 @@ function teamTable(){
   return R;
 }
 const posOf=n=>{ for(const tm of S.teams){ const p=tm.players.find(q=>q.n===n); if(p) return p.pos||(p.zc?'Z':(BYN[norm(n)]||{}).p||''); } return (BYN[norm(n)]||{}).p||''; };
+const ppt=n=>{const q=posOf(n); return q?'<span class="pp">'+esc(q==='Z'?'Z':q)+'</span>':'';};
 const ex=n=>Object.assign({assid:2,falta:0,bonus:0},S.extras[n]||{});
 function foulStats(k){const m={}; S.games.forEach(g=>{ if(!g.done) return; fl(g).forEach(f=>{ if((f.k==='a')!==(k==='a')) return; m[f.by]=(m[f.by]||0)+1;}); }); return m;}
 const FK=f=>f.k==='a'?{ic:'🟥',n:'Agressão',pt:'−5 pontos'}:{ic:'🟨',n:'Falta dura',pt:'−2 pontos'};
@@ -448,7 +449,7 @@ function render(){
 function teamCard(i){
   const t=S.teams[i],T0=TK[t.c];
   const li=t.players.map((p,j)=>{const open=ui.row===i+':'+j;
-    return '<li><div class="pl"><button class="pn" data-act="prow" data-i="'+i+'" data-j="'+j+'">'+esc(p.n)+(ex(p.n).assid===1?' <span class="hint">· atrasou</span>':'')+'</button><button class="tag'+(p.zc?' on':'')+'" data-act="zc" data-i="'+i+'" data-j="'+j+'" aria-pressed="'+!!p.zc+'" title="Zagueiro (conta jogos sem sofrer gol)">ZC</button></div>'+
+    return '<li><div class="pl"><button class="pn" data-act="prow" data-i="'+i+'" data-j="'+j+'">'+esc(p.n)+' '+ppt(p.n)+(ex(p.n).assid===1?' <span class="hint">· atrasou</span>':'')+'</button><button class="tag'+(p.zc?' on':'')+'" data-act="zc" data-i="'+i+'" data-j="'+j+'" aria-pressed="'+!!p.zc+'" title="Zagueiro (conta jogos sem sofrer gol)">ZC</button></div>'+
     (open?'<div class="pact">'+S.teams.map((u,k)=>k===i?'':'<button data-act="mv" data-i="'+i+'" data-j="'+j+'" data-k="'+k+'">→ '+TK[u.c].n+'</button>').join('')+'<button data-act="late" data-n="'+esc(p.n)+'" aria-pressed="'+(ex(p.n).assid===1)+'">'+(ex(p.n).assid===1?'Atrasou ✓ (presença 1)':'Atrasou')+'</button><button data-act="abs" data-i="'+i+'" data-j="'+j+'">Faltou (−5)</button><button data-act="rm" data-i="'+i+'" data-j="'+j+'">Remover</button></div>':'')+'</li>';}).join('');
   return '<section class="team"><div class="th c-'+t.c+'"><span>'+T0.e+' '+T0.n+'</span><span>'+t.players.length+'</span></div>'+(li?'<ul class="plist">'+li+'</ul>':'<div class="none">Sem atletas ainda</div>')+'<button class="addp" data-act="pick" data-t="'+i+'">+ Atleta</button></section>';
 }
@@ -456,7 +457,7 @@ function viewTimes(){
   const n=S.teams.length, started=S.games.length>0;
   let h='';
   if(started) h+='<div class="warnbox">Já existe um dia em andamento ('+S.games.filter(g=>g.done).length+' jogo(s) encerrado(s)). Ajustes aqui valem para o dia todo. Para começar outro sábado use “Novo dia” em ⚙.</div>';
-  h+='<div class="card"><div class="row"><label class="row">Sábado <input type="date" id="fDate" value="'+esc(S.date)+'"></label><div class="seg" role="group" aria-label="Número de times">'+[2,3,4].map(k=>'<button data-act="nt" data-n="'+k+'" aria-pressed="'+(n===k)+'"'+(started?' disabled':'')+'>'+k+' times</button>').join('')+'</div></div></div>';
+  h+='<div class="card"><div class="row"><label class="row">Data do jogo <input type="date" id="fDate" value="'+esc(S.date)+'"></label><div class="seg" role="group" aria-label="Número de times">'+[2,3,4].map(k=>'<button data-act="nt" data-n="'+k+'" aria-pressed="'+(n===k)+'"'+(started?' disabled':'')+'>'+k+' times</button>').join('')+'</div></div></div>';
   const ls=lsGet(SORT); const lsAt=ls&&ls.at?new Date(ls.at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   h+='<div class="card"><h2>Times do sorteio</h2>'+(ls&&ls.teams&&ls.teams.length?'<button class="btn-primary" data-act="impls" style="width:100%;min-height:52px">Usar o sorteio de '+esc(lsAt)+'</button><p class="hint" style="margin-top:6px">Vem do botão “Enviar para a súmula” do sorteio, neste mesmo aparelho.</p>':'<p class="hint">No sorteio, toque em “Enviar para a súmula”. Se preferir, cole o texto abaixo.</p>')+'<details'+(S.teams.every(t=>!t.players.length)&&!(ls&&ls.teams)?' open':'')+'><summary>Colar texto do sorteio</summary><p class="hint">Toque em “Copiar texto” no sorteio, ajuste o que precisar aqui e cole.</p><textarea id="fImp" placeholder="Sorteio Aranha Marrom · 08/11/2026&#10;&#10;⚪ BRANCO&#10;• Maicon (A)&#10;…&#10;🧤 Venilson"></textarea><div class="row" style="margin-top:8px"><button class="btn-primary" data-act="imp">Ler times</button></div></details></div>';
   h+='<div class="tgrid">'+S.teams.map((_,i)=>teamCard(i)).join('')+'</div>';
@@ -476,7 +477,7 @@ function sideHTML(g,s){
 }
 function evText(g,x){
   const who=x.by===null?'Quem fez o gol?':x.by==='*'?'Gol contra / sem autor':x.by;
-  const as=x.by==='*'?'':x.by===null?'':x.as===null?'Assistência? toque para definir':x.as===''?'Sem assistência':'Assistência: '+x.as;
+  const as=x.by==='*'?'':x.by===null?'':x.as===null?'Assistência? toque para definir':x.as===''?'Sem assistência':x.as;
   return {who:who,as:as};
 }
 function viewJogo(){
@@ -527,7 +528,7 @@ function viewResumo(){
   h+=gh+(!sgo?'':S.games.map((g,i)=>{ const sc=score(g), A=T(g.a), B=T(g.b), op=!!ui.og[i];
     let d='';
     if(op){ let pa=0,pb=0; const L=[],R=[];
-      g.goals.forEach(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); (x.s===0?L:R).push('<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'&&!/^Sem/i.test(e.as)?' <small>'+esc(e.as.replace(/^Assistência:\s*/,'assist. '))+'</small>':'')+'</span></div>'); });
+      g.goals.forEach(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); (x.s===0?L:R).push('<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'&&!/^Sem/i.test(e.as)?' <small>'+'🅰️ '+esc(e.as)+'</small>':'')+'</span></div>'); });
       fl(g).forEach(f=>{ (f.s===0?L:R).push('<div class="gl"><span>'+FK(f).ic+' '+esc(f.by)+' <small>'+FK(f).n.toLowerCase()+'</small></span></div>'); });
       const none='<div class="hint">—</div>';
       d='<div class="gdet"><div class="gcols"><div class="gcol">'+(L.join('')||none)+'</div><div class="gcol r">'+(R.join('')||none)+'</div></div><div class="gcols gkrow"><div class="gcol"><small>Goleiro</small> 🧤 '+esc(g.gk[0]||'—')+'</div><div class="gcol r">'+esc(g.gk[1]||'—')+' 🧤 <small>Goleiro</small></div></div></div>'; }
@@ -578,10 +579,10 @@ function renderSheet(){
     const g=S.games[sh.gi], x=g.goals[sh.k], T0=TK[S.teams[x.s?g.b:g.a].c];
     const pl=sidePlayers(g,x.s);
     if(sh.type==='by'){
-      body='<h2>Quem fez o gol do '+T0.n+'?</h2><div class="sub">Gol '+(sh.k+1)+' do jogo '+(sh.gi+1)+'. O placar já foi somado; o autor pode ficar para depois.</div><div class="pgrid">'+pl.map(n=>'<button data-act="by" data-n="'+esc(n)+'">'+esc(n)+(liveGoalCount(n)?'<small>⚽ '+liveGoalCount(n)+' hoje</small>':'')+'</button>').join('')+'<button class="alt" data-act="by" data-n="*">Gol contra / sem autor</button></div><div class="foot"><button data-act="later">Definir depois</button><button style="color:#c0392b" data-act="gdel" data-k="'+sh.k+'">Apagar gol</button></div>';
+      body='<h2>Quem fez o gol do '+T0.n+'?</h2><div class="sub">Gol '+(sh.k+1)+' do jogo '+(sh.gi+1)+'. O placar já foi somado; o autor pode ficar para depois.</div><div class="pgrid">'+pl.map(n=>'<button data-act="by" data-n="'+esc(n)+'">'+esc(n)+' '+ppt(n)+(liveGoalCount(n)?'<small>⚽ '+liveGoalCount(n)+' hoje</small>':'')+'</button>').join('')+'<button class="alt" data-act="by" data-n="*">Gol contra / sem autor</button></div><div class="foot"><button data-act="later">Definir depois</button><button style="color:#c0392b" data-act="gdel" data-k="'+sh.k+'">Apagar gol</button></div>';
     } else {
       const cand=pl;
-      body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>n===x.by?'<button disabled class="selfb">'+esc(n)+'<small>fez o gol</small></button>':'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
+      body='<h2>Assistência de quem?</h2><div class="sub">Gol de <b>'+esc(x.by)+'</b> ('+T0.n+').</div><div class="pgrid"><button class="btn-primary" style="grid-column:1/-1" data-act="as" data-n="">Sem assistência</button>'+cand.map(n=>n===x.by?'<button disabled class="selfb">'+esc(n)+'<small>fez o gol</small></button>':'<button data-act="as" data-n="'+esc(n)+'">'+esc(n)+' '+ppt(n)+'</button>').join('')+'</div><div class="foot"><button data-act="backby">← Trocar o autor</button><button data-act="later">Definir depois</button></div>';
     }
   } else if(sh.type==='img'){
     let cs=false; try{ cs=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[new File([''],'a.png',{type:'image/png'})]})); }catch(e){}
@@ -591,7 +592,7 @@ function renderSheet(){
     body=takeSheet();
   } else if(sh.type==='foul'){
     const g=S.games[S.cur], T0=TK[S.teams[sh.s?g.b:g.a].c];
-    body='<h2>'+(sh.k==='a'?'🟥 Agressão do ':'🟨 Falta dura do ')+T0.n+'</h2><div class="sub">'+(sh.k==='a'?'Quem cometeu a agressão? Vale −5 pontos para o atleta.':'Quem cometeu a falta? Vale −2 pontos para o atleta.')+'</div><div class="pgrid">'+sidePlayers(g,sh.s).map(n=>'<button data-act="foulpick" data-n="'+esc(n)+'">'+esc(n)+(fl(g).some(f=>f.by===n)?'<small>já tem '+(fl(g).some(f=>f.by===n&&f.k==='a')?'agressão':'falta')+' neste jogo</small>':'')+'</button>').join('')+'</div><div class="foot"><button data-act="close">Cancelar</button></div>';
+    body='<h2>'+(sh.k==='a'?'🟥 Agressão do ':'🟨 Falta dura do ')+T0.n+'</h2><div class="sub">'+(sh.k==='a'?'Quem cometeu a agressão? Vale −5 pontos para o atleta.':'Quem cometeu a falta? Vale −2 pontos para o atleta.')+'</div><div class="pgrid">'+sidePlayers(g,sh.s).map(n=>'<button data-act="foulpick" data-n="'+esc(n)+'">'+esc(n)+' '+ppt(n)+(fl(g).some(f=>f.by===n)?'<small>já tem '+(fl(g).some(f=>f.by===n&&f.k==='a')?'agressão':'falta')+' neste jogo</small>':'')+'</button>').join('')+'</div><div class="foot"><button data-act="close">Cancelar</button></div>';
   } else if(sh.type==='pend'){
     const g=S.games[S.cur], p=pending(g);
     body='<h2>Faltam definir '+p.length+' gol'+(p.length>1?'s':'')+'</h2><div class="sub">A súmula só avança quando cada gol tem autor e assistência (ou “sem assistência”).</div><div class="pgrid">'+p.map(o=>'<button data-act="evedit" data-k="'+o.i+'">Gol '+(o.i+1)+' · '+TK[S.teams[o.x.s?g.b:g.a].c].n+'</button>').join('')+'</div><div class="foot"><button data-act="close">Voltar</button><button data-act="noauthor">Deixar todos sem autor e encerrar</button></div>';
