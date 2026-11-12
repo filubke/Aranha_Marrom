@@ -329,7 +329,7 @@ function compute(){
   });
   S.absent.forEach(n=>{rows.push({team:-2,time:'Faltou',nome:n,gols:0,ass:0,vit:0,emp:0,assid:-5,falta:0,bonus:0,zsg:null,gs:null,pos:'',pp:(BYN[norm(n)]||{}).p||'',gk:false,ausente:true});});
   const gkr=rows.filter(r=>r.gk&&r.jogos>0);
-  if(S.games.length&&S.games.every(g=>g.done)&&gkr.length>=2){ const m=Math.min.apply(null,gkr.map(r=>r.gs)); gkr.forEach(r=>{ if(r.gs===m) r.bonus=1; }); }
+  if(S.games.length&&S.games.every(g=>g.done)&&gkr.length>=2){ const m=Math.min.apply(null,gkr.map(r=>r.gs)); const w=gkr.filter(r=>r.gs===m); if(w.length===1) w[0].bonus=1; }
   rows.forEach(r=>{const w=r.gk?2:3; r.total=r.vit*w+r.gols+r.ass+r.emp+r.assid-r.falta*2+(r.zsg||0)+r.bonus*5; r.base=r.vit*w+r.emp+r.assid+(r.zsg||0)-r.falta*2;});
   return rows;
 }

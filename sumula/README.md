@@ -13,7 +13,7 @@ Página para lançar os jogos de sábado (gols, assistências, resultado de cada
 Os dados do dia ficam salvos no aparelho (localStorage). O sorteio e a súmula precisam estar no mesmo endereço (GitHub Pages) para trocar os times.
 
 ## Regras de pontuação (iguais às da planilha)
-Vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença 2 (atraso 1, falta −5), jogo sem sofrer gol para ZC 1, falta dura −2 (marcada no jogo, como um amarelo) e bônus 5 automático para o time de linha que ganhou todos os jogos do dia.
+Vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença 2 (atraso 1, falta −5), jogo sem sofrer gol para ZC 1, falta dura −2 (marcada no jogo, como um amarelo) e bônus 5 automático para o time de linha que ganhou todos os jogos do dia, e bônus 5 para o goleiro que sofreu menos gols no dia (em caso de empate entre goleiros, ninguém leva).
 
 ## Ligar a planilha (quando for a hora)
 Siga o cabeçalho de `apps_script/Code.gs`. Depois cole o endereço `/exec` e a chave em ⚙ dentro da súmula. O script grava nas abas `2026` e `Jogos` com as fórmulas existentes e cria as abas `Lances` e `Goleiros_Jogo`. Login com Google: preencher `GOOGLE_CLIENT_ID` e `ALLOWED_EMAILS` nas propriedades do script.
