@@ -62,15 +62,27 @@ def main():
         passo(3, 'Posições de atletas novos')
         pos_ant = os.path.join(DADOS, 'posicoes_propostas.csv'); import pandas as pd
         antigo = pd.read_csv(pos_ant)
+        # nomes corrigidos na planilha: o histórico já vem com o nome certo; o nome antigo fica sem nenhuma aparição (órfão)
+        import difflib
+        from load import df as _df
+        hoje = set(_df.atleta)
+        import load as _ld
+        if _ld.NAMEMAP: print('   grafias unificadas (acento/maiúscula):', ', '.join(f'{k} -> {v}' for k, v in _ld.NAMEMAP.items()))
+        orfaos = [a for a in antigo.Atleta if a not in hoje]
         roda('classify.py'); roda('final.py')          # final.py reescreve o CSV inteiro
         novo = pd.read_csv(pos_ant)
         add = novo[~novo.Atleta.isin(antigo.Atleta)]
-        pd.concat([antigo, add], ignore_index=True).to_csv(pos_ant, index=False, encoding='utf-8-sig')
+        base = antigo[~antigo.Atleta.isin(orfaos)]
+        pd.concat([base, add], ignore_index=True).to_csv(pos_ant, index=False, encoding='utf-8-sig')
+        for o in orfaos:
+            par = difflib.get_close_matches(o, list(add.Atleta), n=1, cutoff=0.5)
+            pa = antigo[antigo.Atleta == o].iloc[0]
+            print(f"   nome sem aparições na planilha, removido do elenco: {o} (posição que estava: {pa['Posição proposta']})" + (f" -> provável novo nome: {par[0]}" if par else ''))
         print("   atletas novos:", ', '.join(f"{r.Atleta} ({r['Posição proposta']}, confiança {r['Confiança']})" for _, r in add.iterrows()) or 'nenhum')
         passo(4, 'Retreino')
         for s in ('final_fit.py', 'gk.py', 'export.py'): roda(s)
         novo_json = json.load(open(os.path.join(DADOS, 'data_modelo.json'), encoding='utf-8')); os.remove(os.path.join(DADOS, 'data_modelo.json'))
-        assert len(novo_json['roster']) >= len(velho['roster']), 'o novo elenco ficou menor que o antigo'
+        assert len(novo_json['roster']) >= len(velho['roster']) - len(orfaos), 'o novo elenco ficou menor que o antigo'
         assert novo_json['meta']['validos'] >= velho['meta']['validos'], 'menos sábados válidos que antes'
         d = dict(velho); d.update({k: novo_json[k] for k in ('roster', 'pairs', 'pairstat', 'meta')})
         txt = json.dumps(d, ensure_ascii=False, allow_nan=False)

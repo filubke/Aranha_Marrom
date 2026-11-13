@@ -142,3 +142,12 @@ data,jogo,time_a,gols_a,gols_b,time_b
 2026-10-31,7,Branco,0,2,Preto
 2026-10-31,8,Branco,1,1,Azul
 2026-10-31,9,Preto,2,2,Azul
+2026-11-07,1,Branco,2,0,Preto
+2026-11-07,2,Branco,1,1,Azul
+2026-11-07,3,Preto,1,2,Azul
+2026-11-07,4,Preto,0,2,Branco
+2026-11-07,5,Azul,3,2,Branco
+2026-11-07,6,Azul,1,1,Preto
+2026-11-07,7,Branco,4,1,Preto
+2026-11-07,8,Branco,1,1,Azul
+2026-11-07,9,Preto,1,1,Azul

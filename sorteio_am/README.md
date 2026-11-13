@@ -62,3 +62,10 @@ Requisitos: Python 3 com pandas, numpy e openpyxl.
 ## Times desfalcados (faltante)
 
 Um time com menos atletas que os outros joga em desvantagem em todos os jogos, e isso não é qualidade dos atletas. Por isso o treino (`model.py`, função `design`) ignora, em cada sábado, os times com tamanho diferente do usual. Nos testes retroativos isso subiu o R² dos times completos de 0,31 para 0,33. Os sábados com faltante continuam servindo para os outros dois times e para o histórico de duplas.
+
+## Nomes de atletas
+
+A planilha é a fonte da verdade: correções de nome feitas nela (ex.: Elias → Elias Jr.) passam direto para o modelo na próxima atualização.
+O `atualizar.py` unifica sozinho só variações de acento, maiúscula e ponto final (Fábio/Fabio, Kaue/Kauê, Gk/GK), valendo a grafia mais usada.
+Nomes antigos que ficaram sem nenhuma aparição na planilha são removidos do elenco e listados no passo 3 da atualização, com a posição que tinham.
+Exceções manuais (raras) vão em `dados/apelidos_nomes.csv` (`como_esta_na_planilha,nome_correto`).

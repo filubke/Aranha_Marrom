@@ -42,9 +42,9 @@ def resumo(rs, rotulo):
     x = np.array([r['x'] for r in rs]); y = np.array([r['y'] for r in rs]); dec = y != 0
     acerto = int((np.sign(x[dec]) == np.sign(y[dec])).sum()); nd = int(dec.sum())
     # p-valor bilateral aproximado de acertar tanto por acaso (binomial 50%)
-    p = sum(math.comb(nd, k) for k in range(acerto, nd + 1)) / 2 ** nd if nd else float('nan')
+    p = min(1.0, 2 * sum(math.comb(nd, k) for k in range(max(acerto, nd - acerto), nd + 1)) / 2 ** nd) if nd else float('nan')   # bilateral
     print(f"{rotulo}: {len(rs)} jogos | correlação força x saldo de gols {np.corrcoef(x, y)[0,1]:.2f} | "
-          f"time mais forte ganhou {acerto} de {nd} jogos decididos ({100*acerto/max(nd,1):.0f}%; p≈{p:.3f} se fosse acaso) | empates {len(rs)-nd}")
+          f"time mais forte ganhou {acerto} de {nd} jogos decididos ({100*acerto/max(nd,1):.0f}%; p bilateral≈{p:.3f} se fosse acaso) | empates {len(rs)-nd}")
     return dict(jogos=len(rs), corr=round(float(np.corrcoef(x, y)[0, 1]), 3), acerto=f"{acerto}/{nd}", p=round(p, 3))
 print(f"{len(games)} jogos com placar em {len(dias)} sábados.")
 todos = resumo(rows, 'Todos os jogos      ')

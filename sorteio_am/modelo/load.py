@@ -21,7 +21,26 @@ def num(x):
     if x=='' : return 0.0
     try: return float(x)
     except: return 0.0
-NAMEMAP={'Fábio':'Fabio','Kaue':'Kauê','Gk':'GK','Thiago benato':'Thiago Benato','Thiago Benato ':'Thiago Benato','Petty':'Pety','Elias Jr.':'Elias','Bruno F.':'Bruno F'}
+import unicodedata, collections, os
+# Nomes: a planilha é a fonte da verdade. Só unificamos variações que diferem em acento, maiúscula, espaço ou ponto final
+# (ex.: Fábio/Fabio, Kaue/Kauê, Gk/GK); vale a grafia mais usada na planilha. Correções de nome feitas na planilha
+# (ex.: Elias -> Elias Jr.) passam direto. Exceções manuais: dados/apelidos_nomes.csv (colunas: como_esta_na_planilha,nome_correto).
+def _chave(n):
+    n=unicodedata.normalize('NFKD',n); n=''.join(c for c in n if not unicodedata.combining(c))
+    return re.sub(r'\s+',' ',n).strip().rstrip('.').strip().casefold()
+_raw=[r[4].strip() for r in data if len(r)>4 and r[4].strip()]
+_cont=collections.Counter(_raw); _grupos={}
+for _n in _cont: _grupos.setdefault(_chave(_n),[]).append(_n)
+NAMEMAP={}
+for _g in _grupos.values():
+    if len(_g)>1:
+        _best=max(_g,key=lambda x:(_cont[x],x!=x.lower()))
+        for _n in _g:
+            if _n!=_best: NAMEMAP[_n]=_best
+_manual=os.path.join(os.path.dirname(os.path.abspath(SRC)),'apelidos_nomes.csv')
+if os.path.exists(_manual):
+    for _l in csv.DictReader(open(_manual,encoding='utf-8')):
+        if _l.get('como_esta_na_planilha','').strip(): NAMEMAP[_l['como_esta_na_planilha'].strip()]=_l['nome_correto'].strip()
 recs=[]
 for r in data:
     if len(r)<5 or not r[4].strip(): continue
