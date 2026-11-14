@@ -473,7 +473,7 @@ function showToast(msg,act){ui.toast={msg,act}; renderToast(); clearTimeout(tmr)
 function renderToast(){const el=$('#toast'); const t=ui.toast; el.innerHTML=t?'<div class="toast" role="status"><span>'+esc(t.msg)+'</span>'+(t.act?'<button data-act="toastact">'+esc(t.act.label)+'</button>':'')+'</div>':'';}
 
 /* ---------- views ---------- */
-const VERSION='0.7';
+const VERSION='0.7.1';
 const dtxt=iso=>{const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0];};
 function render(){
   const n=S.games.length, done=S.games.filter(g=>g.done).length;
@@ -579,7 +579,7 @@ function viewResumo(){
   const groups=[]; rows.forEach(r=>{ const k=r.ausente?'abs':r.gk?'gk':'t'+r.team; let G=groups[groups.length-1]; if(!G||G.k!==k){G={k:k,r:[],title:r.ausente?'🚫 Faltou':r.gk?'🧤 Goleiros':TK[S.teams[r.team].c].e+' '+TK[S.teams[r.team].c].n,tc:r.team>=0?S.teams[r.team].c:''}; groups.push(G);} G.r.push(r); });
   const spo=!ui.closed.sp, chs=champs();
   h+='<div class="card"><button class="sech" data-act="tgrp" data-k="sp" aria-expanded="'+spo+'"><h2>Pontos dos atletas</h2><i class="car">'+(spo?'▾':'▸')+'</i></button>';
-  if(spo) h+='<div class="row" style="margin:4px 0"><button class="mini" data-act="call" data-v="1">Abrir todos</button><button class="mini" data-act="call" data-v="0">Fechar todos</button></div><p class="hint">Mesma conta da planilha: vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença, jogo sem sofrer gol (ZC), falta dura −2, agressão −5. Bônus de 5 pontos para o time de linha que ganhou todos os jogos e para o goleiro que sofreu menos gols (entram quando todos os jogos terminam).</p>';
+  if(spo) h+='<div class="row" style="margin:4px 0"><button class="mini" data-act="call" data-v="1">Abrir todos</button><button class="mini" data-act="call" data-v="0">Fechar todos</button></div><p class="hint">Vitória 3 (goleiro 2), empate 1, gol 1, assistência 1, presença, jogo sem sofrer gol (ZC), falta dura −2, agressão −5. Os bônus de 5 pontos entram quando todos os jogos terminarem.</p>';
   if(spo) h+=groups.map(G=>{ const op=!ui.closed[G.k];
     return '<div class="grp"><button class="ghd2'+(G.tc?' c-'+G.tc:' nc')+'" data-act="tgrp" data-k="'+G.k+'" aria-expanded="'+op+'"><span>'+G.title+'</span><span class="hint2">'+G.r.length+(G.r.length>1?' atletas':' atleta')+(G.tc&&chs[S.teams.findIndex(u=>u.c===G.tc)]?' · 🏆 bônus':'')+'</span><i class="car">'+(op?'▾':'▸')+'</i></button>'+
       (op?'<div class="tbl"><table><tr><th>Atleta</th><th>Pos</th><th>Total</th><th>G</th><th>A</th><th>V</th><th>E</th><th>SG</th><th>GS</th></tr>'+G.r.map(r=>'<tr><td>'+esc(r.nome)+'</td><td>'+(r.pp?'<span class="pos p-'+r.pp+'">'+r.pp+'</span>':'–')+'</td><td><b>'+r.total+'</b></td><td>'+r.gols+'</td><td>'+r.ass+'</td><td>'+r.vit+'</td><td>'+r.emp+'</td><td>'+(r.zsg===null?'–':r.zsg)+'</td><td>'+(r.gs===null?'–':r.gs)+'</td></tr>').join('')+'</table></div>':'')+'</div>'; }).join('');

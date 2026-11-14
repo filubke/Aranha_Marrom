@@ -1,7 +1,7 @@
 /* Guarda a súmula no aparelho para abrir sem internet.
    Com internet, sempre busca a versão mais nova (espera no máximo 3,5 s e usa a guardada se a rede estiver lenta).
    Nunca guarda nem intercepta as chamadas ao Apps Script (script.google.com). */
-var CACHE = 'sumula-am-0.7';
+var CACHE = 'sumula-am-0.7.1';
 var BASE = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
