@@ -881,3 +881,23 @@ Dia Agrupado,Dia,Time Agrupado,Time,Atleta,Gols,Assistências,Vitorias,Empates,A
 ,07/Nov/2026,,Azul,Carioca,0,0,2,4,2,,,,,12,,12
 ,07/Nov/2026,Goleiro,Goleiro,William,0,0,2,3,2,,,,14,9,Goleiro,9
 ,07/Nov/2026,,Goleiro,Thomas,0,1,3,3,2,,,1,11,17,Goleiro,11
+14/Nov/2026,14/Nov/2026,Branco,Branco,GK,0,0,5,1,2,,3,,,21,ZC,21
+,14/Nov/2026,,Branco,Diego,6,2,5,1,2,,,,,26,,18
+,14/Nov/2026,,Branco,Elias,1,1,5,1,2,,,,,20,,18
+,14/Nov/2026,,Branco,Elton,2,5,5,1,2,,,,,25,,18
+,14/Nov/2026,,Branco,Will,0,1,5,1,2,1,,,,17,,16
+,14/Nov/2026,,Branco,Chico,5,2,5,1,2,,,,,25,,18
+,14/Nov/2026,Azul,Azul,Eliel,0,0,2,0,2,,1,,,9,ZC,9
+,14/Nov/2026,,Azul,Alexandre,1,0,2,0,2,,,,,9,,8
+,14/Nov/2026,,Azul,Fil,3,1,2,0,2,,,,,12,,8
+,14/Nov/2026,,Azul,Presidente Fernando,0,1,2,0,2,,,,,9,,8
+,14/Nov/2026,,Azul,Carioca,0,0,2,0,2,,,,,8,,8
+,14/Nov/2026,,Azul,Nuan,5,2,2,0,2,,,,,15,,8
+,14/Nov/2026,Preto,Preto,Mathias,0,0,1,1,2,,2,,,8,ZC,8
+,14/Nov/2026,,Preto,Berg,1,1,1,1,2,,,,,8,,6
+,14/Nov/2026,,Preto,Thomas,0,0,1,1,2,1,,,,4,,4
+,14/Nov/2026,,Preto,Adriano,1,1,1,1,2,,,,,8,,6
+,14/Nov/2026,,Preto,Dioguinho,1,2,1,1,2,,,,,9,,6
+,14/Nov/2026,,Preto,Maicon,3,2,1,1,2,,,,,11,,6
+,14/Nov/2026,Goleiro,Goleiro,Venilson,0,0,7,1,2,,,1,7,22,Goleiro,17
+,14/Nov/2026,,Goleiro,William,0,0,1,1,2,,,,22,5,Goleiro,5
