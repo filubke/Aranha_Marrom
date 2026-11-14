@@ -214,6 +214,15 @@ tr.sep td{background:var(--surface-2);font-family:var(--display);font-weight:700
 .cfg label{display:grid;gap:4px;margin-bottom:10px;font-size:14px;color:var(--muted)}
 .cfg input{width:100%}
 pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font-size:12.5px;max-height:220px;margin:8px 0}
+/* celulares pequenos em pé (ex.: iPhone 8: 375x667) */
+@media(max-width:420px) and (max-height:720px) and (orientation:portrait){
+ header.top{padding-top:6px;padding-bottom:6px;margin-bottom:8px}header.top .brand img{width:30px;height:30px}.brand h1{font-size:18px}.brand small{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .side .sh{padding:6px 8px;font-size:17px}.side .sc{font-size:64px;padding:4px 0 2px}.side .gol{min-height:50px;font-size:18px;margin:4px 8px 6px}.side .sub{padding:0 8px 8px}.side .sub button{min-height:40px}
+ .foulb{min-height:38px;font-size:13px}.tabs button{min-height:52px}
+ .sheet{max-height:92%;padding-top:12px}.sheet h2{font-size:19px}.sheet .sub{margin-bottom:8px;font-size:13px}
+ .pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}.pgrid button{min-height:46px;font-size:15px;padding:4px 6px}.pgrid .pp{display:block;width:max-content;margin:2px auto 0}
+ .sheet .foot button{flex:1 1 100px;min-height:44px}
+}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
 </style>
 </head>
