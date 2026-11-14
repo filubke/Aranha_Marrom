@@ -146,7 +146,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
 .tabs button{border:0;border-radius:0;min-height:60px;background:transparent;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:14px}
 .tabs button[aria-current=page]{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
-.tabs .bd{font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:99px;padding:0 7px;font-weight:700}
+.ver{text-align:center;font-size:12px;color:var(--muted);margin:14px 0 4px}.tabs .bd{font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:99px;padding:0 7px;font-weight:700}
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:760px;max-height:88%;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -232,6 +232,7 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:8
  .actbar{bottom:calc(36px + env(safe-area-inset-bottom,0px));padding:4px max(10px,env(safe-area-inset-right,0px)) 4px max(10px,env(safe-area-inset-left,0px))}
  .actbar button{min-height:38px;font-size:16px}
  main#view{padding-bottom:96px}
+ body{font-size:14px;line-height:1.35}.card{padding:10px} th,td{padding:4px 5px;font-size:12.5px}th{font-size:10.5px}.gl,.ghd2,.logcols{font-size:13px}.card p,.hint,.sub{font-size:12.5px;line-height:1.3}.card h2{font-size:17px}.card .row button,.card .sendrow button{min-height:40px;font-size:14px}.logcols .hint{font-size:12px}.sech h2,.ghd2{font-size:16px}.pos{font-size:11px;min-width:22px}
  .pgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.pgrid button{min-height:44px;font-size:15px;padding:4px 6px}
  .sheet{padding-top:10px}.sheet h2{font-size:18px}.sheet .sub{margin-bottom:6px;font-size:13px}.sheet .foot button{min-height:42px}
 }
@@ -251,7 +252,7 @@ pre.out{background:var(--surface-2);border:1px solid var(--line);border-radius:8
  .pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}.pgrid button{min-height:46px;font-size:15px;padding:4px 6px}.pgrid .pp{display:block;width:max-content;margin:2px auto 0}
  .sheet .foot button{flex:1 1 100px;min-height:44px}
 }
-@media(max-width:900px){header.top{transition:transform .2s ease}header.top.hide{transform:translateY(-125%)}}
+@media(max-width:900px){header.top{transition:transform .2s ease}header.top.hide{transform:translateY(-125%)}.tabs{transition:transform .2s ease}.actbar{transition:bottom .2s ease}body.hidebars .tabs{transform:translateY(105%)}body.hidebars .actbar{bottom:env(safe-area-inset-bottom,0px)!important}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
 </style>
 </head>
@@ -472,6 +473,7 @@ function showToast(msg,act){ui.toast={msg,act}; renderToast(); clearTimeout(tmr)
 function renderToast(){const el=$('#toast'); const t=ui.toast; el.innerHTML=t?'<div class="toast" role="status"><span>'+esc(t.msg)+'</span>'+(t.act?'<button data-act="toastact">'+esc(t.act.label)+'</button>':'')+'</div>':'';}
 
 /* ---------- views ---------- */
+const VERSION='0.7';
 const dtxt=iso=>{const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0];};
 function render(){
   const n=S.games.length, done=S.games.filter(g=>g.done).length;
@@ -494,6 +496,7 @@ function teamCard(i){
 function viewTimes(){
   const n=S.teams.length, started=S.games.length>0;
   let h='';
+  setTimeout(function(){ const m=document.getElementById('view'); if(m&&S.tab==='times'&&!m.querySelector('.ver')){ const d=document.createElement('div'); d.className='ver'; d.textContent='Súmula Aranha Marrom · v'+VERSION; m.appendChild(d);} },0);
   if(started) h+='<div class="warnbox">Já existe um dia em andamento ('+S.games.filter(g=>g.done).length+' jogo(s) encerrado(s)). Ajustes aqui valem para o dia todo. Para começar outro sábado use “Novo dia” em ⚙.</div>';
   h+='<div class="card"><div class="row"><label class="row">Data do jogo <input type="date" id="fDate" value="'+esc(S.date)+'"></label><div class="seg" role="group" aria-label="Número de times">'+[2,3,4].map(k=>'<button data-act="nt" data-n="'+k+'" aria-pressed="'+(n===k)+'"'+(started?' disabled':'')+'>'+k+' times</button>').join('')+'</div></div></div>';
   const ls=lsGet(SORT); const lsAt=ls&&ls.at?new Date(ls.at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
@@ -647,7 +650,7 @@ function renderSheet(){
     body='<h2>'+(sh.t==='gk'?'Adicionar goleiro':sh.t==='abs'?'Quem faltou?':'Adicionar ao '+TK[S.teams[sh.t].c].n)+'</h2><div class="sub" id="pickMsg">'+esc(ui.pickMsg||'Toque no nome para adicionar. A janela fica aberta para você marcar vários.')+'</div><input type="text" id="pq" placeholder="Buscar atleta" autocomplete="off" style="width:100%"><div class="plist2" id="pl"></div><div class="foot"><button class="btn-primary" data-act="close">Pronto</button></div>';
   } else if(sh.type==='cfg'){
     const c=lsGet(CFGK)||{};
-    body='<h2>Configurações</h2><div class="cfg"><label>Endereço do script da planilha (Apps Script, termina em /exec)<input type="url" id="cUrl" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/…/exec"></label><label>Seu nome (aparece para os outros quando você assume a súmula)<input type="text" id="cNome" value="'+esc(c.name||'')+'" autocomplete="name"></label><label>Chave de acesso<input type="password" id="cKey" value="'+esc(c.key||'')+'" autocomplete="off"></label><label>Login com Google (opcional): ID do cliente OAuth<input type="text" id="cCli" value="'+esc(c.clientId||'')+'" placeholder="123456-abc.apps.googleusercontent.com"></label><div id="gbtn"></div><div class="hint" id="gstat">'+(ui.idToken?'Conectado com Google.':'')+'</div></div><div class="row" style="margin:10px 0"><button data-act="cfgsave" class="btn-primary">Salvar</button><button data-act="cfgtest">Testar conexão</button></div><div class="hint" id="cmsg"></div><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><button data-act="newday">Novo dia (apaga o dia atual)</button><button data-act="close">Fechar</button></div>';
+    body='<h2>Configurações</h2><p class="hint" style="margin:0 0 8px">Súmula Aranha Marrom · versão '+VERSION+'</p><div class="cfg"><label>Endereço do script da planilha (Apps Script, termina em /exec)<input type="url" id="cUrl" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/…/exec"></label><label>Seu nome (aparece para os outros quando você assume a súmula)<input type="text" id="cNome" value="'+esc(c.name||'')+'" autocomplete="name"></label><label>Chave de acesso<input type="password" id="cKey" value="'+esc(c.key||'')+'" autocomplete="off"></label><label>Login com Google (opcional): ID do cliente OAuth<input type="text" id="cCli" value="'+esc(c.clientId||'')+'" placeholder="123456-abc.apps.googleusercontent.com"></label><div id="gbtn"></div><div class="hint" id="gstat">'+(ui.idToken?'Conectado com Google.':'')+'</div></div><div class="row" style="margin:10px 0"><button data-act="cfgsave" class="btn-primary">Salvar</button><button data-act="cfgtest">Testar conexão</button></div><div class="hint" id="cmsg"></div><hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><button data-act="newday">Novo dia (apaga o dia atual)</button><button data-act="close">Fechar</button></div>';
   } else if(sh.type==='newday'){
     body='<h2>Apagar o dia atual?</h2><div class="sub">Todos os jogos e lances deste dia serão apagados deste aparelho. O que já foi enviado para a planilha não muda.</div><div class="foot"><button data-act="close">Cancelar</button><button class="btn-primary" data-act="newdayok">Apagar e começar outro</button></div>';
   } else if(sh.type==='text'){
@@ -1045,8 +1048,9 @@ function closeSheet(){ui.sheet=null; render();}
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&ui.sheet) closeSheet(); });
 (function(){ let ly=window.scrollY||0; const hd=document.querySelector('header.top');
   window.addEventListener('scroll',function(){ const y=window.scrollY||0; if(!hd) return;
-    if(S.tab!=='jogo'||ui.sheet||y<30){ hd.classList.remove('hide'); }
-    else if(y>ly+8){ hd.classList.add('hide'); } else if(y<ly-8){ hd.classList.remove('hide'); }
+    const hb=function(on){ hd.classList.toggle('hide',on); document.body.classList.toggle('hidebars',on); };
+    if(S.tab!=='jogo'||ui.sheet||y<30){ hb(false); }
+    else if(y>ly+8){ hb(true); } else if(y<ly-8){ hb(false); }
     ly=y; },{passive:true}); })();
 window.AM={SY,get S(){return S;},set S(v){S=v;},compute,teamTable,buildPayload,parseSorteio,pending,score,tsv26,tsvJ,syncGames,pairAt,render,commit,setOrder,newGame};
 if(S.games.length&&S.tab==='times'){}
