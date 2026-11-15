@@ -146,7 +146,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
 .tabs button{border:0;border-radius:0;min-height:60px;background:transparent;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:14px}
 .tabs button[aria-current=page]{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
-.ver{text-align:center;font-size:12px;color:var(--muted);margin:14px 0 4px}.tabs .bd{font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:99px;padding:0 7px;font-weight:700}
+.hr{display:block;font-style:normal;font-size:10px;font-weight:500;line-height:1.1;color:var(--muted);margin-top:2px}.ver{text-align:center;font-size:12px;color:var(--muted);margin:14px 0 4px}.tabs .bd{font-size:12px;background:var(--warn-bg);color:var(--warn);border-radius:99px;padding:0 7px;font-weight:700}
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:760px;max-height:88%;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -310,6 +310,8 @@ const score=g=>{let a=0,b=0; g.goals.forEach(x=>x.s===0?a++:b++); return [a,b];}
 const pending=g=>g.goals.map((x,i)=>({x,i})).filter(o=>o.x.by===null||(o.x.by!=='*'&&o.x.as===null));
 function newGame(a,b){return {a,b,gk:[null,null],gkAuto:false,goals:[],fouls:[],done:false};}
 const fl=g=>g.fouls||(g.fouls=[]);
+const hhmm=x=>{ if(!x||!x.t) return ''; try{ return new Date(x.t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
+const hrs=x=>{ const h=hhmm(x); return h?'<i class="hr">'+h+'</i>':''; };
 function setOrder(first,second){const n=S.teams.length; const rest=[]; for(let i=0;i<n;i++) if(i!==first&&i!==second) rest.push(i); S.order=[first,second].concat(rest);}
 function pairAt(i){
   const n=S.teams.length, o=S.order||[0,1,2,3].slice(0,n);
@@ -387,8 +389,8 @@ function buildPayload(){
   S.games.forEach((g,i)=>{ if(!g.done) return; const [a,b]=score(g); const A=TK[S.teams[g.a].c].sheet,B=TK[S.teams[g.b].c].sheet;
     jogos.push({n:i+1,timeA:A,golsA:a,golsB:b,timeB:B});
     gks.push({n:i+1,timeA:A,gkA:g.gk[0]||'',timeB:B,gkB:g.gk[1]||''});
-    let pa=0,pb=0; g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; lances.push({jogo:i+1,ordem:k+1,time:x.s===0?A:B,autor:x.by==='*'?'':x.by,assist:x.as||'',placar:pa+'-'+pb,tipo:'Gol'}); });
-    fl(g).forEach((f,k)=>{ lances.push({jogo:i+1,ordem:g.goals.length+k+1,time:f.s===0?A:B,autor:f.by,assist:'',placar:pa+'-'+pb,tipo:FK(f).n}); }); });
+    let pa=0,pb=0; g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; lances.push({jogo:i+1,ordem:k+1,time:x.s===0?A:B,autor:x.by==='*'?'':x.by,assist:x.as||'',placar:pa+'-'+pb,tipo:'Gol',hora:hhmm(x)}); });
+    fl(g).forEach((f,k)=>{ lances.push({jogo:i+1,ordem:g.goals.length+k+1,time:f.s===0?A:B,autor:f.by,assist:'',placar:pa+'-'+pb,tipo:FK(f).n,hora:hhmm(f)}); }); });
   return {action:'append',date:S.date,jogos:jogos,atletas:rows.map(r=>({agr:r.agr||0,total:r.total,time:r.time,nome:r.nome,gols:r.gols,ass:r.ass,vit:r.vit,emp:r.emp,assid:r.assid,falta:r.falta,bonus:r.bonus,gs:r.gs,pos:r.pos,ausente:!!r.ausente})),lances:lances,goleiros:gks,app:'sumula-am-1'};
 }
 /* leitura do texto do sorteio ("Copiar texto") */
@@ -428,7 +430,7 @@ function startDay(){
 }
 function addGoal(s){
   const g=S.games[S.cur]; if(!g||g.done) return;
-  commit(()=>{g.goals.push({s:s,by:null,as:null}); ui.sheet={type:'by',gi:S.cur,k:g.goals.length-1};});
+  commit(()=>{g.goals.push({s:s,by:null,as:null,t:Date.now()}); ui.sheet={type:'by',gi:S.cur,k:g.goals.length-1};});
 }
 function removeLastGoal(s){
   const g=S.games[S.cur]; if(!g||g.done) return;
@@ -473,7 +475,7 @@ function showToast(msg,act){ui.toast={msg,act}; renderToast(); clearTimeout(tmr)
 function renderToast(){const el=$('#toast'); const t=ui.toast; el.innerHTML=t?'<div class="toast" role="status"><span>'+esc(t.msg)+'</span>'+(t.act?'<button data-act="toastact">'+esc(t.act.label)+'</button>':'')+'</div>':'';}
 
 /* ---------- views ---------- */
-const VERSION='0.7.1';
+const VERSION='0.8';
 const dtxt=iso=>{const p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0];};
 function render(){
   const n=S.games.length, done=S.games.filter(g=>g.done).length;
@@ -534,8 +536,8 @@ function viewJogo(){
   if(g.goals.length||fl(g).length){
     let pa=0,pb=0; const L=[],R=[], dis=g.done?' disabled':'';
     g.goals.forEach((x,k)=>{ x.s===0?pa++:pb++; const e=evText(g,x),pe=x.by===null||(x.by!=='*'&&x.as===null);
-      (x.s===0?L:R).push('<button class="ev'+(pe?' pend':'')+'" data-act="evedit" data-k="'+k+'"'+dis+'><span class="sc2">'+pa+'–'+pb+'</span><span class="tx"><b>⚽ '+esc(e.who)+'</b>'+(e.as?'<small>'+(x.as?'🅰️ ':'')+esc(e.as)+'</small>':'')+'</span></button>'); });
-    fl(g).forEach((f,k)=>{ (f.s===0?L:R).push('<div class="ev fev"><span class="sc2">'+FK(f).ic+'</span><span class="tx"><b>'+esc(f.by)+'</b><small>'+FK(f).n+' · '+FK(f).pt+'</small></span><button class="fx" data-act="fouldel" data-k="'+k+'" aria-label="Remover '+FK(f).n.toLowerCase()+' de '+esc(f.by)+'"'+dis+'>×</button></div>'); });
+      (x.s===0?L:R).push('<button class="ev'+(pe?' pend':'')+'" data-act="evedit" data-k="'+k+'"'+dis+'><span class="sc2">'+pa+'–'+pb+hrs(x)+'</span><span class="tx"><b>⚽ '+esc(e.who)+'</b>'+(e.as?'<small>'+(x.as?'🅰️ ':'')+esc(e.as)+'</small>':'')+'</span></button>'); });
+    fl(g).forEach((f,k)=>{ (f.s===0?L:R).push('<div class="ev fev"><span class="sc2">'+FK(f).ic+hrs(f)+'</span><span class="tx"><b>'+esc(f.by)+'</b><small>'+FK(f).n+' · '+FK(f).pt+'</small></span><button class="fx" data-act="fouldel" data-k="'+k+'" aria-label="Remover '+FK(f).n.toLowerCase()+' de '+esc(f.by)+'"'+dis+'>×</button></div>'); });
     h+='<div class="logcols"><div class="lcol">'+L.join('')+'</div><div class="lcol r">'+R.join('')+'</div></div>';
   } else h+='<p class="hint" style="margin-bottom:14px">Sem gols ainda. Toque em “+ GOL” no time que marcou.</p>';
   h+='<div class="card"><details><summary>Opções do jogo</summary><div class="row" style="margin:6px 0">'+
@@ -569,8 +571,8 @@ function viewResumo(){
   h+=gh+(!sgo?'':S.games.map((g,i)=>{ const sc=score(g), A=T(g.a), B=T(g.b), op=!!ui.og[i];
     let d='';
     if(op){ let pa=0,pb=0; const L=[],R=[];
-      g.goals.forEach(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); (x.s===0?L:R).push('<div class="gl"><span class="sc2">'+pa+'–'+pb+'</span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'&&!/^Sem/i.test(e.as)?' <small>'+'🅰️ '+esc(e.as)+'</small>':'')+'</span></div>'); });
-      fl(g).forEach(f=>{ (f.s===0?L:R).push('<div class="gl"><span>'+FK(f).ic+' '+esc(f.by)+' <small>'+FK(f).n.toLowerCase()+'</small></span></div>'); });
+      g.goals.forEach(x=>{ x.s===0?pa++:pb++; const e=evText(g,x); (x.s===0?L:R).push('<div class="gl"><span class="sc2">'+pa+'–'+pb+hrs(x)+'</span><span>⚽ '+esc(e.who)+(e.as&&x.by!=='*'&&!/^Sem/i.test(e.as)?' <small>'+'🅰️ '+esc(e.as)+'</small>':'')+'</span></div>'); });
+      fl(g).forEach(f=>{ (f.s===0?L:R).push('<div class="gl"><span>'+FK(f).ic+' '+esc(f.by)+' <small>'+FK(f).n.toLowerCase()+(hhmm(f)?' · '+hhmm(f):'')+'</small></span></div>'); });
       const none='<div class="hint">—</div>';
       d='<div class="gdet"><div class="gcols"><div class="gcol">'+(L.join('')||none)+'</div><div class="gcol r">'+(R.join('')||none)+'</div></div><div class="gcols gkrow"><div class="gcol"><small>Goleiro</small> 🧤 '+esc(g.gk[0]||'—')+'</div><div class="gcol r">'+esc(g.gk[1]||'—')+' 🧤 <small>Goleiro</small></div></div></div>'; }
     return '<div class="gsum'+(g.done?'':' todo')+'"><button class="ghd" data-act="tgame" data-i="'+i+'" aria-expanded="'+op+'"><b>'+(i+1)+'</b><span class="gt"><u class="u-'+S.teams[g.a].c+'"></u>'+A.n+'</span><span class="gs">'+(g.done||g.goals.length?sc[0]+' × '+sc[1]:'–')+'</span><span class="gt r">'+B.n+'<u class="u-'+S.teams[g.b].c+'"></u></span><i class="car">'+(op?'▾':'▸')+'</i></button>'+(g.done?'':'<div class="hint pad">'+(i===S.cur&&g.goals.length?'em andamento':'ainda não encerrado')+'</div>')+d+'</div>'; }).join(''))+'</div>';
@@ -613,7 +615,7 @@ function renderSheet(){
   if(sh.type==='ev'){
     const g=S.games[sh.gi], x=g.goals[sh.k]; if(!x){ body=''; } else {
     const T0=TK[S.teams[x.s?g.b:g.a].c], e=evText(g,x);
-    body='<h2>Gol do '+T0.n+'</h2><div class="sub"><b>'+esc(e.who)+'</b>'+(e.as?' · '+(x.as?'assistência de ':'')+esc(e.as):'')+'</div><div class="pgrid" style="grid-template-columns:1fr">'+
+    body='<h2>Gol do '+T0.n+(hhmm(x)?' <small style="font-weight:500;color:var(--muted)">· '+hhmm(x)+'</small>':'')+'</h2><div class="sub"><b>'+esc(e.who)+'</b>'+(e.as?' · '+(x.as?'assistência de ':'')+esc(e.as):'')+'</div><div class="pgrid" style="grid-template-columns:1fr">'+
       '<button data-act="gby" data-k="'+sh.k+'">Trocar autor</button>'+(x.by!=='*'?'<button data-act="gas" data-k="'+sh.k+'">Trocar assistência</button>':'')+
       '<button class="alt" style="color:#c0392b" data-act="gdel" data-k="'+sh.k+'">Apagar este gol (o placar diminui)</button></div><div class="foot"><button data-act="close">Cancelar</button></div>'; }
   } else if(sh.type==='by'||sh.type==='as'){
@@ -967,7 +969,7 @@ document.addEventListener('click',function(e){
   if(RO()&&!ROOK[a]){ showToast('Só visualização. Toque em “Assumir” para anotar.'); return; }
   switch(a){
     case 'foul': if(!S.games[S.cur].done){ ui.sheet={type:'foul',s:+d.s,k:d.k||''}; render(); } break;
-    case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push(ui.sheet.k==='a'?{s:s,by:d.n,k:'a'}:{s:s,by:d.n}); ui.sheet=null; }); break; }
+    case 'foulpick': { const g=S.games[S.cur], s=ui.sheet.s; commit(()=>{ fl(g).push(ui.sheet.k==='a'?{s:s,by:d.n,k:'a',t:Date.now()}:{s:s,by:d.n,t:Date.now()}); ui.sheet=null; }); break; }
     case 'fouldel': { const g=S.games[S.cur]; commit(()=>{ fl(g).splice(+d.k,1); }); break; }
     case 'img': showResultImage(); break;
     case 'imgshare': case 'imgcopy': imgActions(a,e.target.closest('button'),d.p); break;

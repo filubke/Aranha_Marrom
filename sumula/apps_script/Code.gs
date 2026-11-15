@@ -458,12 +458,13 @@ function append_(req) {
     sj.getRange(startJ, 1).setNumberFormat('dd/MM/yyyy');
 
     // Lances (gols e faltas graves) e goleiros: abas novas, só da súmula
-    var sl = ensureTab_(ss, CFG.TAB_LANCES, ['Data', 'Jogo', 'Ordem', 'Time', 'Autor', 'Assistência', 'Placar (A-B)', 'Tipo']);
+    var sl = ensureTab_(ss, CFG.TAB_LANCES, ['Data', 'Jogo', 'Ordem', 'Time', 'Autor', 'Assistência', 'Placar (A-B)', 'Tipo', 'Hora']);
+    try { if (!sl.getRange(1, 9).getValue()) sl.getRange(1, 9).setValue('Hora').setFontWeight('bold'); } catch (eh) {}
     var sg = ensureTab_(ss, CFG.TAB_GK, ['Data', 'Jogo', 'Time A', 'Goleiro A', 'Time B', 'Goleiro B']);
     if (req.replace) { dropOwn_(sl, req.date); dropOwn_(sg, req.date); }
     var sp = function (n) { return n ? (spell[norm_(n)] || String(n).trim()) : ''; };
-    var rowsL = (req.lances || []).map(function (l) { return [dateObj, l.jogo, l.ordem, l.time, sp(l.autor), sp(l.assist), l.placar || '', l.tipo || 'Gol']; });
-    if (rowsL.length) { var rl = sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 8); rl.setValues(rowsL); sl.getRange(rl.getRow(), 1, rowsL.length, 1).setNumberFormat('dd/MM/yyyy'); }
+    var rowsL = (req.lances || []).map(function (l) { return [dateObj, l.jogo, l.ordem, l.time, sp(l.autor), sp(l.assist), l.placar || '', l.tipo || 'Gol', l.hora || '']; });
+    if (rowsL.length) { var rl = sl.getRange(sl.getLastRow() + 1, 1, rowsL.length, 9); rl.setValues(rowsL); sl.getRange(rl.getRow(), 1, rowsL.length, 1).setNumberFormat('dd/MM/yyyy'); sl.getRange(rl.getRow(), 9, rowsL.length, 1).setNumberFormat('HH:mm'); }
     var rowsG = (req.goleiros || []).map(function (g) { return [dateObj, g.n, g.timeA, sp(g.gkA), g.timeB, sp(g.gkB)]; });
     if (rowsG.length) { var rg = sg.getRange(sg.getLastRow() + 1, 1, rowsG.length, 6); rg.setValues(rowsG); sg.getRange(rg.getRow(), 1, rowsG.length, 1).setNumberFormat('dd/MM/yyyy'); }
     SpreadsheetApp.flush();
@@ -507,6 +508,8 @@ function pdfLogo_() {
   } catch (e) { return ''; }
 }
 
+function hr_(l) { return l.hora ? '<span class="sub">' + esc_(l.hora) + '</span> ' : ''; }
+
 function pdfHtml_(req, logo) {
   var p = String(req.date).split('-'), dia = p[2] + '/' + p[1] + '/' + p[0];
   var MARROM = '#4a2113', MARROM2 = '#6b2f16', OURO = '#c9954a', CREME = '#f7f1e7', LINHA = '#d9c9b0';
@@ -539,8 +542,8 @@ function pdfHtml_(req, logo) {
     var g = gks[j.n] || {}, L = [], R = [];
     (req.lances || []).filter(function (l) { return l.jogo === j.n; }).forEach(function (l) {
       var left = l.time === j.timeA, s, ic = (l.tipo === 'Agressão') ? '🟥' : '🟨';
-      if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">⚽ <b>' + (l.autor ? esc_(l.autor) : 'gol contra') + '</b>' + (l.assist ? ' <span class="sub">ass. ' + esc_(l.assist) + '</span>' : '') + '</div>';
-      else s = '<div class="ev" style="color:' + (l.tipo === 'Agressão' ? '#b71c1c' : '#8a5a00') + '">' + ic + ' <b>' + esc_(l.autor) + '</b> <span class="sub">' + esc_(l.tipo.toLowerCase()) + '</span></div>';
+      if ((l.tipo || 'Gol') === 'Gol') s = '<div class="ev">' + hr_(l) + '⚽ <b>' + (l.autor ? esc_(l.autor) : 'gol contra') + '</b>' + (l.assist ? ' <span class="sub">ass. ' + esc_(l.assist) + '</span>' : '') + '</div>';
+      else s = '<div class="ev" style="color:' + (l.tipo === 'Agressão' ? '#b71c1c' : '#8a5a00') + '">' + hr_(l) + ic + ' <b>' + esc_(l.autor) + '</b> <span class="sub">' + esc_(l.tipo.toLowerCase()) + '</span></div>';
       (left ? L : R).push(s);
     });
     var ca = cor(j.timeA), cb = cor(j.timeB);
