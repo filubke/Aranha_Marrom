@@ -90,6 +90,7 @@ def main():
         m0, m1 = velho['meta'], d['meta']
         print(f"   base até {m0['ate']} -> {m1['ate']} | sábados válidos {m0['validos']} -> {m1['validos']} | R² (um dia fora) {m0['r2']} -> {m1['r2']} | atletas {len(velho['roster'])} -> {len(d['roster'])}")
         passo(5, 'Teste retroativo (últimos 8 sábados)'); print('\n'.join(roda('avaliar_sabados.py', '8').splitlines()[-4:-1]))
+        print('   calibração (faixas de incerteza):'); print('\n'.join('   '+l for l in roda('calibrar.py').rstrip().splitlines()))
         passo(6, 'Aba Jogos'); print(roda('jogos.py').rstrip())
         passo(7, 'Reconstruindo index.html'); roda('build.py', cwd=os.path.join(HERE, APP)); print('   index.html atualizado')
     except Exception as e:

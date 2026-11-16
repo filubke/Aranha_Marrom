@@ -124,10 +124,11 @@ th{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .stat b{display:block;font-family:var(--display);font-size:28px;line-height:1.05;font-variant-numeric:tabular-nums}
 .stat span{font-size:14px;color:var(--muted)}
 .bars{display:grid;gap:8px;margin:6px 0 14px}
-.bar{display:grid;grid-template-columns:70px minmax(0,1fr) 124px;gap:10px;align-items:center;font-size:14px}
+.bar{display:grid;grid-template-columns:70px minmax(0,1fr) 138px;gap:10px;align-items:center;font-size:14px}
 .bar i{display:block;height:12px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden;border:1px solid var(--line)}
 .bar i u{position:absolute;inset:0 auto 0 0;text-decoration:none;border-radius:2px}
 .bar .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.bar .v small{display:block;font-size:11.5px;opacity:.85;white-space:nowrap}
 .first{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
 .first strong{font-family:var(--display);font-size:24px;text-transform:uppercase}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
@@ -477,6 +478,7 @@ function isLine(n){ const p=byName(n); return !!p&&present.has(n)&&posOf(p)!=='G
 function teamOf(n){ if(!result||!result.teams) return -1; return result.teams.findIndex(t=>t.players.some(p=>p.n===n)); }
 function pairEvid(a,b){ const P=DATA.pairstat||{}; return P[a+'|'+b]||P[b+'|'+a]||null; }
 function ptsFmt(x){ return Number(x).toFixed(1).replace('.',','); }
+function ptsRange(m,sd){ const h=1.2816*sd; return Math.max(0,Math.round(m-h))+' a '+Math.min(18,Math.round(m+h)); }
 function renderRuleSelects(){
   const opt='<option value="">Atleta…</option>'+roster.map(p=>'<option>'+esc(p.n)+'</option>').join('');
   ['rlA','rlB'].forEach(id=>{ const el=$('#'+id); const v=el.value; el.innerHTML=opt; if(roster.some(p=>p.n===v)) el.value=v; });
@@ -622,6 +624,8 @@ function summarize(res){
   res.spread=Math.max(...res.teams.map(t=>t.S))-Math.min(...res.teams.map(t=>t.S));
   if(!res.edited&&res.origSpread===undefined) res.origSpread=res.spread;
   if(res.sl) res.rank=rankPct(res,lossOf(res));
+  { const NT=res.teams.length, sumV=res.teams.reduce((x,t)=>x+t.V,0);   // desvio previsto do time vs média do dia: ruído do sábado + incerteza dos ratings
+    res.teams.forEach(t=>{ const vc=Math.pow((NT-1)/NT,2)*t.V+(sumV-t.V)/(NT*NT); t.sdp=Math.sqrt((NT-1)/NT*NOISE*NOISE+vc); }); }
   const key=res.teams.map(t=>t.S.toFixed(4)+'/'+t.V.toFixed(4)).join('|');
   if(res._key===key) return;
   res._key=key;
@@ -677,14 +681,14 @@ function renderResult0(){
     (r.edited?'<div class="stat"><b>'+r.origSpread.toFixed(1).replace('.',',')+' → '+r.spread.toFixed(1).replace('.',',')+' pts</b><span>diferença entre o mais forte e o mais fraco, antes → depois das suas trocas</span></div>':'')+'</div>';
   h+='<h3 style="margin-bottom:6px">Chance de ganhar o dia <span class="hint" style="text-transform:none;font-family:var(--body);font-size:14px;font-weight:400">e pontos esperados por sábado</span></h3><div class="bars">'+r.teams.map(t=>{
     const col='var(--'+(t.c.k==='branco'?'branco-line':t.c.k+'-bg')+')';
-    return '<div class="bar"><span>'+t.c.n+'</span><i><u style="width:'+Math.round(t.win*100*2)+'%;max-width:100%;background:'+col+'"></u></i><span class="v">'+Math.round(t.win*100)+'% · '+(std6(r)?ptsFmt(DATA.meta.avgPts+t.D)+' pts':(t.D>=0?'+':'−')+Math.abs(t.D).toFixed(1).replace('.',',')+' pts vs média')+'</span></div>';
+    return '<div class="bar"><span>'+t.c.n+'</span><i><u style="width:'+Math.round(t.win*100*2)+'%;max-width:100%;background:'+col+'"></u></i><span class="v">'+Math.round(t.win*100)+'% · '+(std6(r)?ptsFmt(DATA.meta.avgPts+t.D)+' pts<small>faixa de 80%: '+ptsRange(DATA.meta.avgPts+t.D,t.sdp)+'</small>':(t.D>=0?'+':'−')+Math.abs(t.D).toFixed(1).replace('.',',')+' pts vs média')+'</span></div>';
   }).join('')+'</div>';
   if(first) h+='<div class="first"><span class="hint">1º jogo</span><strong>'+first[0].c.n+' × '+first[1].c.n+'</strong><span class="hint">empate: par ou ímpar</span><button type="button" id="reFirst" class="btn-ghost">Sortear outro</button></div>';
   else if(r.teams.length===2) h+='<div class="first"><span class="hint">Jogo</span><strong>'+r.teams[0].c.n+' × '+r.teams[1].c.n+'</strong></div>';
   else if(r.fix) h+='<div class="first" style="display:block"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:6px"><span class="hint">Todos contra todos (6 jogos, 3 rodadas)</span><button type="button" id="reFirst" class="btn-ghost">Sortear outra ordem</button></div>'+r.fix.map((rd,i)=>'<div style="margin:4px 0"><span class="hint">Rodada '+(i+1)+'</span> &nbsp; '+rd.map(m=>'<strong style="font-size:19px">'+r.teams[m[0]].c.n+' × '+r.teams[m[1]].c.n+'</strong>').join(' <span class="hint">e</span> ')+'</div>').join('')+'</div>';
   h+='<div class="actions"><button type="button" id="again" class="btn-primary">Sortear de novo</button><button type="button" id="copyTxt">Copiar texto</button><button type="button" id="toSumula">Enviar para a súmula</button><button type="button" id="mkImg">Gerar imagem</button><a id="sumLink" class="dl" href="../sumula/" hidden>Abrir a súmula</a>'+(r.edited?'<button type="button" id="undoEdits">Voltar ao sorteio original</button>':'')+'</div>';
   h+='<div id="imgOut"></div>';
-  h+='<div class="note">Força em pontos por sábado, relativa à média. O ruído de um sábado é de cerca de ±'+NOISE.toFixed(0)+' pontos por time'+(std6(r)?'':' (medido em times de 6; em outro formato é só uma estimativa)')+', então o resultado do dia continua aberto.</div>';
+  h+='<div class="note">Força em pontos por sábado, relativa à média. O ruído de um sábado é de cerca de ±'+NOISE.toFixed(0)+' pontos por time'+(std6(r)?'':' (medido em times de 6; em outro formato é só uma estimativa)')+', então o resultado do dia continua aberto.'+(std6(r)?' A faixa de 80% mostra onde o time deve ficar em 8 de cada 10 sábados'+(DATA.meta.cov80?' (testada nos sábados passados: cobriu '+Math.round(DATA.meta.cov80*100)+'%)':'')+'.':'')+'</div>';
   el.innerHTML=h;
 }
 function textOut(){

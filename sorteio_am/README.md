@@ -17,9 +17,9 @@ Sorteio equilibrado (mas aleatório) dos 3 times de sábado. A página `index.ht
 ## Como o modelo funciona
 
 1. **Dados** (`load.py`): lê a planilha, normaliza nomes (Fábio→Fabio, Preto≡Marrom etc.) e monta uma linha por atleta por sábado.
-2. **Alvo**: pontos do time no dia (3·vitória + empate), centrados pela média do dia. Só entram os 32 sábados "válidos" (9 jogos registrados).
+2. **Alvo**: pontos do time no dia (3·vitória + empate), centrados pela média do dia. Só entram os sábados "válidos" (9 jogos registrados).
 3. **Rating dos atletas** (`model.py`, `final_fit.py`): regressão ridge (λ=6) dos pontos do time sobre indicadores 0/1 de quem jogou. Há um *prior* a partir de gols, assistências e jogos sem sofrer gol por sábado, para atletas com pouco histórico. Ratings são centrados por posição. Cada atleta tem também um desvio-padrão (incerteza).
-4. **Validação**: leave-one-day-out R² ≈ 0,25 e teste de permutação p < 0,01. O ruído de um time num sábado é ≈ 4 pts, então o modelo equilibra mas não prevê placar.
+4. **Validação**: ver a seção "Como verificamos a estimação" abaixo. O ruído de um time num sábado é ≈ 4 pts, então o modelo equilibra mas não prevê o campeão.
 5. **Goleiros** (`gk.py`): ranking próprio, pontos por jogo encolhidos para a média (6 jogos por time). Com 2 goleiros, uma das configurações dá mais jogos a um deles.
 6. **Pares** (`pairs.py`): sinergia/antagonismo por dupla, comparado a uma distribuição por permutação. Nenhuma dupla é significativa, mas Adriano+Eliel e Alexandre+Eliel entram como regra opcional "não jogam juntos".
 7. **Posições** (`classify.py`, `final.py`, `pos.py`): classificação Z/M/A pelo histórico.
@@ -69,3 +69,18 @@ A planilha é a fonte da verdade: correções de nome feitas nela (ex.: Elias �
 O `atualizar.py` unifica sozinho só variações de acento, maiúscula e ponto final (Fábio/Fabio, Kaue/Kauê, Gk/GK), valendo a grafia mais usada.
 Nomes antigos que ficaram sem nenhuma aparição na planilha são removidos do elenco e listados no passo 3 da atualização, com a posição que tinham.
 Exceções manuais (raras) vão em `dados/apelidos_nomes.csv` (`como_esta_na_planilha,nome_correto`).
+
+## Como verificamos a estimação
+
+Todos os testes treinam só com o passado e comparam com o que aconteceu; o `atualizar.py` roda todos a cada atualização.
+
+| Teste | Script | O que responde |
+|---|---|---|
+| Um dia fora (LODO) | `model.py` | R² treinando sem cada sábado |
+| Sábado a sábado | `avaliar_sabados.py` | Últimos 8 sábados: R², correlação, erro e campeão acertado (`historico_modelo.csv`) |
+| Teste real (prospectivo) | `avaliar_novos.py` | Modelo congelado prevê o sábado novo antes de entrar no treino (`historico_previsoes.csv`) |
+| Calibração e faixas | `calibrar.py` | Inclinação real × previsto, IC 95% do R² por bootstrap, cobertura das faixas de 50/80/90% usadas na página (`historico_calibracao.csv`, `calibracao.json`; a cobertura de 80% vai para a página) |
+| Aba Jogos | `jogos.py` | O time mais forte ganha mais jogos? (p bilateral) |
+| Duplas | `pairs.py` | Efeito de duplas contra embaralhamento dos resultados |
+
+A faixa de 80% mostrada na página usa: desvio = √[(N−1)/N · σ² + variância centrada dos ratings do time], com σ = 4 pts (ruído de um time num sábado) e N = nº de times; é testada fora da amostra pelo `calibrar.py`.

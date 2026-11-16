@@ -1,0 +1,16 @@
+{
+ "base_ate": "2026-11-14",
+ "sabados_avaliados": 24,
+ "r2": 0.243,
+ "r2_ic95": [
+  -0.043,
+  0.482
+ ],
+ "correlacao": 0.493,
+ "rmse": 3.32,
+ "rmse_todos_iguais": 3.81,
+ "inclinacao": 0.99,
+ "cobertura50": 0.543,
+ "cobertura80": 0.829,
+ "cobertura90": 0.929
+}
