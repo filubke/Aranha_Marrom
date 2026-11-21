@@ -495,7 +495,7 @@ function sortableTable(elId, headers, rows, opts){
     data.forEach(function(r,ri){
       html+='<tr>';
       headers.forEach(function(h){
-        var v=h.render?h.render(r,ri):h.val(r);
+        var v=h.render?h.render(r,ri,data,state):h.val(r);
         var stickStyle=h.stick?(' style="left:'+(h.stickLeft||0)+'px"'):'';
         html+='<td class="'+(h.num?'num':'')+(h.rank?' rank':'')+(h.stick?' stick':'')+'"'+stickStyle+'>'+v+'</td>';
       });
@@ -526,16 +526,22 @@ function sortableTable(elId, headers, rows, opts){
   draw();
   return {getData:function(){return data;}};
 }
-function rankCol(){return {label:'#',rank:true,sortable:false,stick:true,stickLeft:0,val:function(){return 0;},render:function(r,i){
-  var cls=i===0?' r1':i===1?' r2':i===2?' r3':'';
-  return '<span class="rank-badge'+cls+'">'+(i+1)+'</span>';
+function rankCol(tieCol){return {label:'#',rank:true,sortable:false,stick:true,stickLeft:0,val:function(){return 0;},render:function(r,i,data,state){
+  /* empate na coluna de ordenação (tieCol) = mesma posição (1,1,3,...) */
+  var pos=i+1;
+  if(tieCol!==undefined&&state&&state.col===tieCol&&data){
+    var key=function(x){return x.total;};
+    var j=i; while(j>0&&key(data[j-1])===key(r)) j--; pos=j+1;
+  }
+  var cls=pos===1?' r1':pos===2?' r2':pos===3?' r3':'';
+  return '<span class="rank-badge'+cls+'">'+pos+'</span>';
 }};}
 
 /* ---------- Overview tables ---------- */
 safe(function(){
   var totalRodadas=DATA.dates.length;
   function jogosDe(nm){var p=DATA.players[nm]; return p?p.jogos:0;}
-  sortableTable('tbl-pontuacao',[rankCol(),
+  sortableTable('tbl-pontuacao',[rankCol(9),
     {label:'Atleta',stick:true,stickLeft:30,val:function(r){return r.atleta;}},
     {label:'Sábados',num:true,val:function(r){return jogosDe(r.atleta);}},
     {label:'Gols',num:true,val:function(r){return r.gols;}},
